@@ -7,6 +7,17 @@ import (
 )
 
 func Run() error {
+	call := func(f func(app *Application) error) func(c *cli.Context) {
+		return func(c *cli.Context) {
+			a, e := New(c.GlobalString("config"))
+			if e == nil {
+				e = f(a)
+			}
+			if e != nil {
+				log.Fatalf("%v", e)
+			}
+		}
+	}
 
 	app := cli.NewApp()
 	app.Name = "itpkg"
@@ -30,15 +41,7 @@ func Run() error {
 			Name:    "server",
 			Aliases: []string{"s"},
 			Usage:   "Start web server",
-			Action: func(c *cli.Context) {
-				a, e := New(c.GlobalString("config"))
-				if e == nil {
-					e = a.Server()
-				}
-				if e != nil {
-					log.Fatalf("Error on start server: %v", e)
-				}
-			},
+			Action:  call(func(a *Application) error { return a.Server() }),
 		},
 		{
 			Name:    "routes",
@@ -53,48 +56,28 @@ func Run() error {
 			Aliases: []string{"re"},
 			Usage:   "Start a console for the redis",
 			Flags:   []cli.Flag{},
-			Action: func(c *cli.Context) {
-				//todo
-				//				a := New(c.String("environment"))
-				//				a.RedisShell()
-			},
+			Action:  call(func(a *Application) error { return a.RedisShell() }),
 		},
 		{
 			Name:    "nginx",
 			Aliases: []string{"n"},
 			Usage:   "Nginx config file demo",
 			Flags:   []cli.Flag{},
-			Action: func(c *cli.Context) {
-				if a, e := New(c.GlobalString("config")); e == nil {
-					a.Nginx()
-				} else {
-					log.Fatalf("%v", e)
-				}
-			},
+			Action:  call(func(a *Application) error { return a.Nginx() }),
 		},
 		{
 			Name:    "openssl",
 			Aliases: []string{"ssl"},
 			Usage:   "Openssl certs command demo",
 			Flags:   []cli.Flag{},
-			Action: func(c *cli.Context) { //todo
-				if a, e := New(c.GlobalString("config")); e == nil {
-					a.Openssl()
-				} else {
-					log.Fatalf("%v", e)
-				}
-			},
+			Action:  call(func(a *Application) error { return a.Openssl() }),
 		},
 		{
 			Name:    "db:console",
 			Aliases: []string{"db"},
 			Usage:   "Start a console for the database",
 			Flags:   []cli.Flag{},
-			Action: func(c *cli.Context) {
-				//todo
-				//				a := New(c.String("environment"))
-				//				a.DbShell()
-			},
+			Action:  call(func(a *Application) error { return a.DbShell() }),
 		},
 		{
 			Name:  "db:seed",
@@ -117,24 +100,16 @@ func Run() error {
 			},
 		},
 		{
-			Name:  "db:drop",
-			Usage: "Drops the database",
-			Flags: []cli.Flag{},
-			Action: func(c *cli.Context) {
-				//todo
-				//				a := New(c.String("environment"))
-				//				a.DbDrop()
-			},
+			Name:   "db:drop",
+			Usage:  "Drops the database",
+			Flags:  []cli.Flag{},
+			Action: call(func(a *Application) error { return a.DbDrop() }),
 		},
 		{
-			Name:  "db:create",
-			Usage: "Creates the database",
-			Flags: []cli.Flag{},
-			Action: func(c *cli.Context) {
-				//todo
-				//				a := New(c.String("environment"))
-				//				a.DbCreate()
-			},
+			Name:   "db:create",
+			Usage:  "Creates the database",
+			Flags:  []cli.Flag{},
+			Action: call(func(a *Application) error { return a.DbCreate() }),
 		},
 		{
 			Name:  "test:email",
@@ -158,28 +133,16 @@ func Run() error {
 			},
 		},
 		{
-			Name:  "cache:clear",
-			Usage: "Clear cache from redis",
-			Flags: []cli.Flag{},
-			Action: func(c *cli.Context) {
-				//todo
-				//				a := Load(c.String("environment"), false)
-				//				if e := a.clearRedis("cache://*"); e != nil {
-				//					log.Fatalf("Error on clear cache: %v", e)
-				//				}
-			},
+			Name:   "cache:clear",
+			Usage:  "Clear cache from redis",
+			Flags:  []cli.Flag{},
+			Action: call(func(a *Application) error { return a.ClearRedis("cache://") }),
 		},
 		{
-			Name:  "token:clear",
-			Usage: "Clear tokens from redis",
-			Flags: []cli.Flag{},
-			Action: func(c *cli.Context) {
-				//todo
-				//				a := Load(c.String("environment"), false)
-				//				if e := a.clearRedis("token://*"); e != nil {
-				//					log.Fatalf("Error on clear tokens: %v", e)
-				//				}
-			},
+			Name:   "token:clear",
+			Usage:  "Clear tokens from redis",
+			Flags:  []cli.Flag{},
+			Action: call(func(a *Application) error { return a.ClearRedis("token://") }),
 		},
 	}
 

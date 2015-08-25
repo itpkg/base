@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"text/template"
 
-	"github.com/op/go-logging"
 	"gopkg.in/yaml.v2"
 )
 
@@ -32,25 +31,11 @@ type Configuration struct {
 		Host string
 		Port int
 		Db   int
-		Pool int
 	}
 }
 
 func (p *Configuration) IsProduction() bool {
 	return p.Env == "production"
-}
-
-func (p *Configuration) Init() {
-	if p.IsProduction() {
-		if bkd, err := logging.NewSyslogBackend("itpkg"); err == nil {
-			logging.SetBackend(bkd)
-		} else {
-			log.Printf("%v", err)
-		}
-		logging.SetLevel(logging.INFO, "")
-	} else {
-		logging.SetLevel(logging.DEBUG, "")
-	}
 }
 
 func (p *Configuration) DbCreate() (string, []string) {
@@ -95,9 +80,20 @@ func (p *Configuration) DbShell() (string, []string) {
 	}
 }
 
+func (p *Configuration) DbUrl() string {
+	return fmt.Sprintf(
+		"%s://%s:%s@%s:%d/%s?%s",
+		p.Database.Adapter, p.Database.User, p.Database.Password, p.Database.Host,
+		p.Database.Port, p.Database.Name, p.Database.Extra)
+}
+
 func (p *Configuration) RedisShell() (string, []string) {
 	//todo select db
 	return "telnet", []string{p.Redis.Host, strconv.Itoa(p.Redis.Port)}
+}
+
+func (p *Configuration) RedisUrl() string {
+	return fmt.Sprintf("%s:%d", p.Redis.Host, p.Redis.Port)
 }
 
 //-----------------------------------------------------------------------------

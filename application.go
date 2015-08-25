@@ -79,7 +79,7 @@ func (p *Application) clearRedis(pat string) error {
 	return nil
 }
 
-func (p *Application) Openssl() {
+func (p *Application) Openssl() error {
 	args := make(map[string]interface{}, 0)
 
 	//todo 加载domain
@@ -101,9 +101,10 @@ openssl x509 -noout -text -in {{.domain}}-cert.pem
 `))
 
 	t.Execute(os.Stdout, args)
+	return nil
 }
 
-func (p *Application) Nginx() {
+func (p *Application) Nginx() error {
 	args := make(map[string]interface{}, 0)
 	//todo 加载domain
 	args["domain"] = "localhost"
@@ -187,4 +188,27 @@ return 405;
 `))
 
 	t.Execute(os.Stdout, args)
+	return nil
+}
+
+func (p *Application) ClearRedis(pat string) error {
+
+	r := p.Redis.Get()
+	defer r.Close()
+
+	v, e := r.Do("KEYS", pat)
+	if e != nil {
+		return e
+	}
+	ks := v.([]interface{})
+	if len(ks) == 0 {
+		p.Logger.Info("Empty!!!")
+		return nil
+	}
+	_, e = r.Do("DEL", ks...)
+	if e != nil {
+		return e
+	}
+	p.Logger.Info("Clear redis keys by '%s' succressfully!", pat)
+	return nil
 }
