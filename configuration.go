@@ -2,22 +2,15 @@ package base
 
 import (
 	"bytes"
+	"fmt"
+	"log"
 	"os"
+	"strconv"
 	"text/template"
-	//	"fmt"
-	//	"strconv"
-	//	"time"
-	//
-	//	"github.com/garyburd/redigo/redis"
-	//	"github.com/jinzhu/gorm"
+
+	"github.com/op/go-logging"
 	"gopkg.in/yaml.v2"
 )
-
-type envVars struct {
-	Env        string
-	Secrets    string
-	DbPassword string
-}
 
 type Configuration struct {
 	Env     string
@@ -43,12 +36,76 @@ type Configuration struct {
 	}
 }
 
+func (p *Configuration) IsProduction() bool {
+	return p.Env == "production"
+}
+
+func (p *Configuration) Init() {
+	if p.IsProduction() {
+		if bkd, err := logging.NewSyslogBackend("itpkg"); err == nil {
+			logging.SetBackend(bkd)
+		} else {
+			log.Printf("%v", err)
+		}
+		logging.SetLevel(logging.INFO, "")
+	} else {
+		logging.SetLevel(logging.DEBUG, "")
+	}
+}
+
+func (p *Configuration) DbCreate() (string, []string) {
+	d := p.Database.Adapter
+	switch d {
+	case "postgres":
+		return "psql", []string{
+			"-h", p.Database.Host,
+			"-p", strconv.Itoa(p.Database.Port),
+			"-U", p.Database.User,
+			"-c", fmt.Sprintf("CREATE DATABASE %s", p.Database.Name)}
+	default:
+		return "echo", []string{"Unknown database driver " + d}
+	}
+}
+
+func (p *Configuration) DbDrop() (string, []string) {
+	d := p.Database.Adapter
+	switch d {
+	case "postgres":
+		return "psql", []string{
+			"-h", p.Database.Host,
+			"-p", strconv.Itoa(p.Database.Port),
+			"-U", p.Database.User,
+			"-c", fmt.Sprintf("DROP DATABASE %s", p.Database.Name)}
+	default:
+		return "echo", []string{"Unknown database driver " + d}
+	}
+}
+
+func (p *Configuration) DbShell() (string, []string) {
+	d := p.Database.Adapter
+	switch d {
+	case "postgres":
+		return "psql", []string{
+			"-h", p.Database.Host,
+			"-p", strconv.Itoa(p.Database.Port),
+			"-d", p.Database.Name,
+			"-U", p.Database.User}
+	default:
+		return "echo", []string{"Unknown database driver " + d}
+	}
+}
+
+func (p *Configuration) RedisShell() (string, []string) {
+	//todo select db
+	return "telnet", []string{p.Redis.Host, strconv.Itoa(p.Redis.Port)}
+}
+
 //-----------------------------------------------------------------------------
 func Load(file string) (*Configuration, error) {
 	_, err := os.Stat(file)
 	if err == nil {
 		config := Configuration{}
-		log.Info("Load from config file: %s", file)
+		log.Printf("Load from config file: %s", file)
 
 		var tmp *template.Template
 		tmp, err = template.ParseFiles(file)
@@ -56,11 +113,12 @@ func Load(file string) (*Configuration, error) {
 			return nil, err
 		}
 
-		vars := envVars{
-			Env:        os.Getenv("ITPKG_ENV"),
-			Secrets:    os.Getenv("ITPKG_SECRETS"),
-			DbPassword: os.Getenv("ITPKG_DATABASE_PASSWORD"),
-		}
+		vars := make(map[string]interface{}, 0)
+
+		vars["Env"] = os.Getenv("ITPKG_ENV")
+		vars["Secrets"] = os.Getenv("ITPKG_SECRETS")
+		vars["DbPassword"] = os.Getenv("ITPKG_DATABASE_PASSWORD")
+
 		var buf bytes.Buffer
 
 		if err = tmp.Execute(&buf, vars); err != nil {
