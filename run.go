@@ -13,8 +13,11 @@ func Run() error {
 			if err == nil {
 				err = f(config, c)
 			}
-			if err != nil {
-				log.Fatalf("%v", err)
+			if err == nil {
+				log.Println("DONE!!!")
+
+			} else {
+				log.Fatalln(err)
 			}
 		}
 	}
@@ -24,8 +27,10 @@ func Run() error {
 			if e == nil {
 				e = f(a, c)
 			}
-			if e != nil {
-				log.Fatalf("%v", e)
+			if e == nil {
+				log.Println("DONE!!!")
+			} else {
+				log.Fatalln(e)
 			}
 		}
 	}
@@ -93,20 +98,20 @@ func Run() error {
 		{
 			Name:    "nginx",
 			Aliases: []string{"n"},
-			Usage:   "TODO: Nginx config file demo",
+			Usage:   "Nginx config file demo",
 			Flags:   []cli.Flag{},
 			Action: callA(func(a Application, c *cli.Context) error {
-				//todo
+				a.Nginx()
 				return nil
 			}),
 		},
 		{
 			Name:    "openssl",
 			Aliases: []string{"ssl"},
-			Usage:   "TODO: Openssl certs command demo",
+			Usage:   "Openssl certs command demo",
 			Flags:   []cli.Flag{},
 			Action: callA(func(a Application, c *cli.Context) error {
-				//todo
+				a.Openssl()
 				return nil
 			}),
 		},
@@ -122,12 +127,11 @@ func Run() error {
 		},
 		{
 			Name:  "db:seed",
-			Usage: "TODO: Load the seed data",
+			Usage: "Load the seed data",
 			Flags: []cli.Flag{},
-			Action: func(c *cli.Context) {
-				//todo
-
-			},
+			Action: callA(func(a Application, c *cli.Context) error {
+				return a.Seed()
+			}),
 		},
 		{
 			Name:  "db:migrate",
@@ -158,13 +162,13 @@ func Run() error {
 		},
 		{
 			Name:   "cache:clear",
-			Usage:  "TODO: Clear cache records",
+			Usage:  "Clear cache records",
 			Flags:  []cli.Flag{},
 			Action: callA(func(a Application, c *cli.Context) error { return a.Clear("cache://") }),
 		},
 		{
 			Name:  "token:clear",
-			Usage: "TODO: Clear tokens records",
+			Usage: "Clear tokens records",
 			Flags: []cli.Flag{},
 			Action: callA(func(a Application, c *cli.Context) error {
 				return a.Clear("token://")
@@ -181,9 +185,9 @@ func Run() error {
 		},
 		{
 			Name:   "assets:clear",
-			Usage:  "TODO: Clear assets resources",
+			Usage:  "Clear assets resources",
 			Flags:  []cli.Flag{},
-			Action: callA(func(a Application, c *cli.Context) error { return a.Clear("cache://") }),
+			Action: callA(func(a Application, c *cli.Context) error { return a.Clear("assets://") }),
 		},
 	}
 

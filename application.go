@@ -18,9 +18,9 @@ import (
 type Application interface {
 	Server()
 	Migrate()
-	Seeds()
-	Nginx(*Configuration) error
-	Openssl(*Configuration) error
+	Seed() error
+	Nginx()
+	Openssl()
 	Clear(pat string) error
 	Register(en Engine)
 }
@@ -42,10 +42,19 @@ func (p *application) Migrate() {
 	})
 }
 
-func (p *application) Seeds() {
-	p.loop(func(en Engine) error {
-		p.mrt.Invoke(en.Seeds)
-		return nil
+func (p *application) Seed() error {
+	return p.loop(func(en Engine) error {
+		if val, err := p.mrt.Invoke(en.Seed); err == nil {
+			ret := val[0].Interface()
+			if ret == nil {
+				return nil
+			} else {
+				return ret.(error)
+			}
+		} else {
+			return err
+		}
+
 	})
 }
 
@@ -62,7 +71,7 @@ func (p *application) Register(en Engine) {
 	p.engines = append(p.engines, en)
 }
 
-func (p *application) Openssl(cfg *Configuration) error {
+func (p *application) Openssl() {
 	args := make(map[string]interface{}, 0)
 
 	//todo 加载domain
@@ -84,10 +93,12 @@ openssl x509 -noout -text -in {{.domain}}-cert.pem
 `))
 
 	t.Execute(os.Stdout, args)
-	return nil
+
 }
 
-func (p *application) Nginx(cfg *Configuration) error {
+func (p *application) Nginx() {
+	cfg := p.mrt.Injector.Get(reflect.TypeOf((*Configuration)(nil))).Interface().(*Configuration)
+
 	args := make(map[string]interface{}, 0)
 	//todo 加载domain
 	args["domain"] = "localhost"
@@ -171,11 +182,10 @@ return 405;
 `))
 
 	t.Execute(os.Stdout, args)
-	return nil
+
 }
 
 func (p *application) Clear(pat string) error {
-	logger := p.mrt.Injector.Get(reflect.TypeOf((*syslog.Writer)(nil))).Interface().(*syslog.Writer)
 	redis := p.mrt.Injector.Get(reflect.TypeOf((*redis.Pool)(nil))).Interface().(*redis.Pool)
 	r := redis.Get()
 	defer r.Close()
@@ -186,14 +196,12 @@ func (p *application) Clear(pat string) error {
 	}
 	ks := v.([]interface{})
 	if len(ks) == 0 {
-		logger.Info("Empty!!!")
 		return nil
 	}
 	_, e = r.Do("DEL", ks...)
 	if e != nil {
 		return e
 	}
-	logger.Info(fmt.Sprintf("Clear redis keys by '%s' succressfully!", pat))
 	return nil
 }
 
@@ -203,7 +211,7 @@ func New(name string) (Application, error) {
 
 	//configuration
 	cfg, err := Load(name)
-	if err == nil {
+	if err != nil {
 		return nil, err
 	}
 	mrt.Map(cfg)
@@ -214,6 +222,7 @@ func New(name string) (Application, error) {
 		return nil, err
 	}
 	mrt.Map(logger)
+	mrt.Use(Logger())
 
 	//database
 	var db gorm.DB
@@ -227,10 +236,7 @@ func New(name string) (Application, error) {
 	}
 	db.DB().SetMaxIdleConns(12)
 	db.DB().SetMaxOpenConns(120)
-	for _, ext := range []string{"uuid-ossp", "pgcrypto"} {
-		db.Exec(fmt.Sprintf("CREATE EXTENSION IF NOT EXISTS \"%s\"", ext))
-	}
-	mrt.Map(db)
+	mrt.Map(&db)
 
 	//redis
 	mrt.Map(&redis.Pool{
@@ -260,6 +266,7 @@ func New(name string) (Application, error) {
 	mrt.Map(aes_cip)
 
 	app := &application{
+		mrt:     mrt,
 		engines: make([]Engine, 0),
 	}
 
