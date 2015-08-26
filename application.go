@@ -27,16 +27,6 @@ func (p *Application) DbMigrate() error {
 	})
 }
 
-func (p *Application) DbCreate() error {
-	cmd, args := p.Cfg.DbCreate()
-	return Shell(cmd, args...)
-}
-
-func (p *Application) DbDrop() error {
-	cmd, args := p.Cfg.DbDrop()
-	return Shell(cmd, args...)
-}
-
 func (p *Application) Server() error {
 
 	if err := LoopEngine(func(en Engine) error {
@@ -46,37 +36,6 @@ func (p *Application) Server() error {
 		return err
 	}
 	return http.ListenAndServe(fmt.Sprintf("%s:%d", p.Cfg.Http.Host, p.Cfg.Http.Port), p.Router)
-}
-
-func (p *Application) DbShell() error {
-	cmd, args := p.Cfg.DbShell()
-	return Shell(cmd, args...)
-}
-
-func (p *Application) RedisShell() error {
-	cmd, args := p.Cfg.RedisShell()
-	return Shell(cmd, args...)
-}
-
-func (p *Application) clearRedis(pat string) error {
-	r := p.Redis.Get()
-	defer r.Close()
-
-	v, e := r.Do("KEYS", pat)
-	if e != nil {
-		return e
-	}
-	ks := v.([]interface{})
-	if len(ks) == 0 {
-		p.Logger.Info("Empty!!!")
-		return nil
-	}
-	_, e = r.Do("DEL", ks...)
-	if e != nil {
-		return e
-	}
-	p.Logger.Info("Clear redis keys by %s succressfully!", pat)
-	return nil
 }
 
 func (p *Application) Openssl() error {

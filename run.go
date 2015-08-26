@@ -7,11 +7,22 @@ import (
 )
 
 func Run() error {
-	call := func(f func(app *Application) error) func(c *cli.Context) {
+	callC := func(f func(cfg *Configuration, ctx *cli.Context) error) func(c *cli.Context) {
+		return func(c *cli.Context) {
+			config, err := Load(c.GlobalString("config"))
+			if err == nil {
+				err = f(config, c)
+			}
+			if err != nil {
+				log.Fatalf("%v", err)
+			}
+		}
+	}
+	callA := func(f func(app *Application, ctx *cli.Context) error) func(c *cli.Context) {
 		return func(c *cli.Context) {
 			a, e := New(c.GlobalString("config"))
 			if e == nil {
-				e = f(a)
+				e = f(a, c)
 			}
 			if e != nil {
 				log.Fatalf("%v", e)
@@ -41,87 +52,17 @@ func Run() error {
 			Name:    "server",
 			Aliases: []string{"s"},
 			Usage:   "Start web server",
-			Action:  call(func(a *Application) error { return a.Server() }),
+			Action:  callA(func(a *Application, c *cli.Context) error { return a.Server() }),
 		},
 		{
-			Name:    "routes",
-			Aliases: []string{"ro"},
-			Usage:   "Print out all defined routes in match order, with names",
-			Action: func(c *cli.Context) {
-				//todo
-			},
-		},
-		{
-			Name:    "redis",
-			Aliases: []string{"re"},
-			Usage:   "Start a console for the redis",
-			Flags:   []cli.Flag{},
-			Action:  call(func(a *Application) error { return a.RedisShell() }),
-		},
-		{
-			Name:    "nginx",
-			Aliases: []string{"n"},
-			Usage:   "Nginx config file demo",
-			Flags:   []cli.Flag{},
-			Action:  call(func(a *Application) error { return a.Nginx() }),
-		},
-		{
-			Name:    "openssl",
-			Aliases: []string{"ssl"},
-			Usage:   "Openssl certs command demo",
-			Flags:   []cli.Flag{},
-			Action:  call(func(a *Application) error { return a.Openssl() }),
-		},
-		{
-			Name:    "db:console",
-			Aliases: []string{"db"},
-			Usage:   "Start a console for the database",
-			Flags:   []cli.Flag{},
-			Action:  call(func(a *Application) error { return a.DbShell() }),
-		},
-		{
-			Name:  "db:seed",
-			Usage: "Load the seed data",
-			Flags: []cli.Flag{},
-			Action: func(c *cli.Context) {
-				//todo
-				//				a := Load(c.String("environment"), false)
-				//				a.Seed.run()
-			},
-		},
-		{
-			Name:  "db:migrate",
-			Usage: "Migrate the database",
-			Flags: []cli.Flag{},
-			Action: func(c *cli.Context) {
-				//todo
-				//				a := Load(c.String("environment"), false)
-				//				a.DbMigrate()
-			},
-		},
-		{
-			Name:   "db:drop",
-			Usage:  "Drops the database",
-			Flags:  []cli.Flag{},
-			Action: call(func(a *Application) error { return a.DbDrop() }),
-		},
-		{
-			Name:   "db:create",
-			Usage:  "Creates the database",
-			Flags:  []cli.Flag{},
-			Action: call(func(a *Application) error { return a.DbCreate() }),
-		},
-		{
-			Name:  "test:email",
-			Usage: "Test mailer",
+			Name:    "worker",
+			Aliases: []string{"w"},
+			Usage:   "TODO: Run background job",
 			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "from, f",
-					Usage: "from-address",
-				},
-				cli.StringFlag{
-					Name:  "to, t",
-					Usage: "to-address",
+				cli.IntFlag{
+					Name:  "threads, t",
+					Usage: "threads poll size",
+					Value: 5,
 				},
 			},
 			Action: func(c *cli.Context) {
@@ -133,16 +74,108 @@ func Run() error {
 			},
 		},
 		{
+			Name:    "routes",
+			Aliases: []string{"ro"},
+			Usage:   "TODO: Print out all defined routes in match order, with names",
+			Action: func(c *cli.Context) {
+				//todo
+			},
+		},
+		{
+			Name:    "redis",
+			Aliases: []string{"re"},
+			Usage:   "Start a console for the redis",
+			Flags:   []cli.Flag{},
+			Action: callC(func(cfg *Configuration, ctx *cli.Context) error {
+				cmd, args := cfg.RedisShell()
+				return Shell(cmd, args...)
+			}),
+		},
+		{
+			Name:    "nginx",
+			Aliases: []string{"n"},
+			Usage:   "Nginx config file demo",
+			Flags:   []cli.Flag{},
+			Action:  callA(func(a *Application, c *cli.Context) error { return a.Nginx() }),
+		},
+		{
+			Name:    "openssl",
+			Aliases: []string{"ssl"},
+			Usage:   "Openssl certs command demo",
+			Flags:   []cli.Flag{},
+			Action:  callA(func(a *Application, c *cli.Context) error { return a.Openssl() }),
+		},
+		{
+			Name:    "db:console",
+			Aliases: []string{"db"},
+			Usage:   "Start a console for the database",
+			Flags:   []cli.Flag{},
+			Action: callC(func(cfg *Configuration, ctx *cli.Context) error {
+				cmd, args := cfg.DbShell()
+				return Shell(cmd, args...)
+			}),
+		},
+		{
+			Name:  "db:seed",
+			Usage: "TODO: Load the seed data",
+			Flags: []cli.Flag{},
+			Action: func(c *cli.Context) {
+				//todo
+				//				a := Load(c.String("environment"), false)
+				//				a.Seed.run()
+			},
+		},
+		{
+			Name:  "db:migrate",
+			Usage: "TODO: Migrate the database",
+			Flags: []cli.Flag{},
+			Action: func(c *cli.Context) {
+				//todo
+				//				a := Load(c.String("environment"), false)
+				//				a.DbMigrate()
+			},
+		},
+		{
+			Name:  "db:drop",
+			Usage: "Drops the database",
+			Flags: []cli.Flag{},
+			Action: callC(func(cfg *Configuration, ctx *cli.Context) error {
+				cmd, args := cfg.DbDrop()
+				return Shell(cmd, args...)
+			}),
+		},
+		{
+			Name:  "db:create",
+			Usage: "Creates the database",
+			Flags: []cli.Flag{},
+			Action: callC(func(cfg *Configuration, ctx *cli.Context) error {
+				cmd, args := cfg.DbCreate()
+				return Shell(cmd, args...)
+			}),
+		},
+		{
 			Name:   "cache:clear",
-			Usage:  "Clear cache from redis",
+			Usage:  "TODO: Clear cache records",
 			Flags:  []cli.Flag{},
-			Action: call(func(a *Application) error { return a.ClearRedis("cache://") }),
+			Action: callA(func(a *Application, c *cli.Context) error { return a.ClearRedis("cache://") }),
 		},
 		{
 			Name:   "token:clear",
-			Usage:  "Clear tokens from redis",
+			Usage:  "TODO: Clear tokens records",
 			Flags:  []cli.Flag{},
-			Action: call(func(a *Application) error { return a.ClearRedis("token://") }),
+			Action: callA(func(a *Application, c *cli.Context) error { return a.ClearRedis("token://") }),
+		},
+		{
+			Name:   "assets:import",
+			Usage:  "TODO: Import assets resources",
+			Flags:  []cli.Flag{},
+			Action: callA(func(a *Application, c *cli.Context) error { return a.ClearRedis("cache://") }),
+		},
+		{
+			Name:   "assets:clear",
+			Usage:  "TODO: Clear assets resources",
+			Flags:  []cli.Flag{},
+			Action: callA(func(a *Application, c *cli.Context) error { return a.ClearRedis("cache://") }),
 		},
 	}
 

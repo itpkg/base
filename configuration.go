@@ -19,13 +19,12 @@ type Configuration struct {
 		Port int
 	}
 	Database struct {
-		Adapter  string
 		Host     string
 		Port     int
 		User     string
 		Password string
 		Name     string
-		Extra    string
+		SslMode  string
 	}
 	Redis struct {
 		Host string
@@ -39,52 +38,38 @@ func (p *Configuration) IsProduction() bool {
 }
 
 func (p *Configuration) DbCreate() (string, []string) {
-	d := p.Database.Adapter
-	switch d {
-	case "postgres":
-		return "psql", []string{
-			"-h", p.Database.Host,
-			"-p", strconv.Itoa(p.Database.Port),
-			"-U", p.Database.User,
-			"-c", fmt.Sprintf("CREATE DATABASE %s", p.Database.Name)}
-	default:
-		return "echo", []string{"Unknown database driver " + d}
-	}
+	return "psql", []string{
+		"-h", p.Database.Host,
+		"-p", strconv.Itoa(p.Database.Port),
+		"-U", p.Database.User,
+		"-c", fmt.Sprintf("CREATE DATABASE %s ENCODING 'UTF-8'", p.Database.Name)}
 }
 
 func (p *Configuration) DbDrop() (string, []string) {
-	d := p.Database.Adapter
-	switch d {
-	case "postgres":
-		return "psql", []string{
-			"-h", p.Database.Host,
-			"-p", strconv.Itoa(p.Database.Port),
-			"-U", p.Database.User,
-			"-c", fmt.Sprintf("DROP DATABASE %s", p.Database.Name)}
-	default:
-		return "echo", []string{"Unknown database driver " + d}
-	}
+
+	return "psql", []string{
+		"-h", p.Database.Host,
+		"-p", strconv.Itoa(p.Database.Port),
+		"-U", p.Database.User,
+		"-c", fmt.Sprintf("DROP DATABASE %s", p.Database.Name)}
+
 }
 
 func (p *Configuration) DbShell() (string, []string) {
-	d := p.Database.Adapter
-	switch d {
-	case "postgres":
-		return "psql", []string{
-			"-h", p.Database.Host,
-			"-p", strconv.Itoa(p.Database.Port),
-			"-d", p.Database.Name,
-			"-U", p.Database.User}
-	default:
-		return "echo", []string{"Unknown database driver " + d}
-	}
+
+	return "psql", []string{
+		"-h", p.Database.Host,
+		"-p", strconv.Itoa(p.Database.Port),
+		"-d", p.Database.Name,
+		"-U", p.Database.User}
+
 }
 
 func (p *Configuration) DbUrl() string {
 	return fmt.Sprintf(
-		"%s://%s:%s@%s:%d/%s?%s",
-		p.Database.Adapter, p.Database.User, p.Database.Password, p.Database.Host,
-		p.Database.Port, p.Database.Name, p.Database.Extra)
+		"postgres://%s:%s@%s:%d/%s?sslmode=%s",
+		p.Database.User, p.Database.Password, p.Database.Host,
+		p.Database.Port, p.Database.Name, p.Database.SslMode)
 }
 
 func (p *Configuration) RedisShell() (string, []string) {

@@ -3,6 +3,7 @@ package base
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"fmt"
 	"log"
 	"time"
 
@@ -61,13 +62,18 @@ func New(file string) (*Application, error) {
 
 	//database
 	var db gorm.DB
-	db, err = gorm.Open(cfg.Database.Adapter, cfg.DbUrl())
+	db, err = gorm.Open("postgres", cfg.DbUrl())
 	if err != nil {
 		return nil, err
 	}
 	db.LogMode(!cfg.IsProduction())
 	if err = db.DB().Ping(); err != nil {
 		return nil, err
+	}
+	db.DB().SetMaxIdleConns(12)
+	db.DB().SetMaxOpenConns(120)
+	for _, ext := range []string{"uuid-ossp", "pgcrypto"} {
+		db.Exec(fmt.Sprintf("CREATE EXTENSION IF NOT EXISTS \"%s\"", ext))
 	}
 	args["db"] = &db
 
