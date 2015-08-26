@@ -1,7 +1,6 @@
 package base_test
 
 import (
-	"crypto/aes"
 	"github.com/itpkg/base"
 	"testing"
 )
@@ -14,7 +13,8 @@ func TestRandom(t *testing.T) {
 
 func TestHmac(t *testing.T) {
 	key, _ := base.RandomBytes(16)
-	h := base.Hmac{Key: key}
+	h := base.Hmac{}
+	h.Init(key)
 
 	dest1 := h.Sum([]byte(hello))
 	dest2 := h.Sum([]byte(hello))
@@ -41,8 +41,8 @@ func TestBase64(t *testing.T) {
 
 func TestAes(t *testing.T) {
 	key, _ := base.RandomBytes(32)
-	c, _ := aes.NewCipher(key)
-	a := base.Aes{Cip: c}
+	a := base.Aes{}
+	a.Init(key)
 
 	dest1, iv1, _ := a.Encrypt([]byte(hello))
 	dest2, iv2, _ := a.Encrypt([]byte(hello))

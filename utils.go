@@ -60,11 +60,14 @@ func Base64Decode(src []byte) ([]byte, error) {
 }
 
 type Hmac struct {
-	Key []byte `inject:"hmac key"` //32 bits
+	key []byte
 }
 
+func (p *Hmac) Init(key []byte) {
+	p.key = key
+}
 func (p *Hmac) Sum(src []byte) []byte {
-	mac := hmac.New(sha512.New, p.Key)
+	mac := hmac.New(sha512.New, p.key)
 	mac.Write(src)
 	return mac.Sum(nil)
 }
@@ -75,15 +78,23 @@ func (p *Hmac) Equal(src, dst []byte) bool {
 
 type Aes struct {
 	//16、24或者32位的[]byte，分别对应AES-128, AES-192或AES-256算法
-	Cip cipher.Block `inject:"aes cipher"`
+	cip cipher.Block
 }
 
+func (p *Aes) Init(key []byte) error {
+	if cip, err := aes.NewCipher(key); err == nil {
+		p.cip = cip
+		return nil
+	} else {
+		return err
+	}
+}
 func (p *Aes) Encrypt(src []byte) ([]byte, []byte, error) {
 	iv, err := RandomBytes(aes.BlockSize)
 	if err != nil {
 		return nil, nil, err
 	}
-	cfb := cipher.NewCFBEncrypter(p.Cip, iv)
+	cfb := cipher.NewCFBEncrypter(p.cip, iv)
 	ct := make([]byte, len(src))
 	cfb.XORKeyStream(ct, src)
 	return ct, iv, nil
@@ -91,7 +102,7 @@ func (p *Aes) Encrypt(src []byte) ([]byte, []byte, error) {
 }
 
 func (p *Aes) Decrypt(src, iv []byte) []byte {
-	cfb := cipher.NewCFBDecrypter(p.Cip, iv)
+	cfb := cipher.NewCFBDecrypter(p.cip, iv)
 	pt := make([]byte, len(src))
 	cfb.XORKeyStream(pt, src)
 	return pt

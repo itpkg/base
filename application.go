@@ -1,8 +1,6 @@
 package base
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
 	"fmt"
 	"log/syslog"
 	"os"
@@ -259,11 +257,16 @@ func New(name string) (Application, error) {
 	})
 
 	//aes
-	var aes_cip cipher.Block
-	if aes_cip, err = aes.NewCipher([]byte(cfg.Secrets[60:92])); err != nil {
+	aes := Aes{}
+	if err = aes.Init([]byte(cfg.Secrets[60:92])); err != nil {
 		return nil, err
 	}
-	mrt.Map(aes_cip)
+	mrt.Map(&aes)
+
+	//hmax
+	hmac := Hmac{}
+	hmac.Init([]byte(cfg.Secrets[40:56]))
+	mrt.Map(&hmac)
 
 	app := &application{
 		mrt:     mrt,
