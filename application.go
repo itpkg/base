@@ -20,16 +20,37 @@ type Application struct {
 	Db     *gorm.DB        `inject:""`
 }
 
+func (p *Application) LoopEngine(f func(en Engine) error) error {
+	for _, obj := range beans.Objects() {
+		//		if eo, ok := obj.Value.(Engine); ok {
+		//			if err := f(eo); err != nil {
+		//				return err
+		//			}
+		//			fmt.Sprintln("########")
+		//		}
+
+		switch obj.Value.(type) {
+		case Engine:
+			fmt.Printf("#### %s\n", obj)
+			if err := f(obj.Value.(Engine)); err != nil {
+				return err
+			}
+		default:
+			//fmt.Printf("#### %s\n", obj.Value)
+		}
+	}
+	return nil
+}
+
 func (p *Application) DbMigrate() error {
-	return LoopEngine(func(en Engine) error {
+	return p.LoopEngine(func(en Engine) error {
 		en.Migrate()
 		return nil
 	})
 }
 
 func (p *Application) Server() error {
-
-	if err := LoopEngine(func(en Engine) error {
+	if err := p.LoopEngine(func(en Engine) error {
 		en.Mount()
 		return nil
 	}); err != nil {

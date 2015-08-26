@@ -127,13 +127,11 @@ func Run() error {
 		},
 		{
 			Name:  "db:migrate",
-			Usage: "TODO: Migrate the database",
+			Usage: "Migrate the database",
 			Flags: []cli.Flag{},
-			Action: func(c *cli.Context) {
-				//todo
-				//				a := Load(c.String("environment"), false)
-				//				a.DbMigrate()
-			},
+			Action: callA(func(a *Application, c *cli.Context) error {
+				return a.DbMigrate()
+			}),
 		},
 		{
 			Name:  "db:drop",

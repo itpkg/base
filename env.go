@@ -19,25 +19,10 @@ var beans inject.Graph
 func Register(objects map[string]interface{}) error {
 	items := make([]*inject.Object, 0)
 	for k, v := range objects {
+		log.Printf("Find engine %s", k)
 		items = append(items, &inject.Object{Value: v, Name: k})
 	}
 	return beans.Provide(items...)
-}
-
-func LoopEngine(f func(en Engine) error) error {
-	for _, obj := range beans.Objects() {
-		switch obj.Value.(type) {
-		case Engine:
-			// en := obj.Value.(Engine)
-			// n,v,d := en.Info()
-			// log.Printf("%s %s %s", n, v, d)
-			if err := f(obj.Value.(Engine)); err != nil {
-				return err
-			}
-		default:
-		}
-	}
-	return nil
 }
 
 func New(file string) (*Application, error) {
@@ -108,14 +93,14 @@ func New(file string) (*Application, error) {
 	args["logger"] = logging.MustGetLogger("itpkg")
 
 	//router
-
 	if cfg.IsProduction() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	args["router"] = gin.Default()
 
-	//Init
+	//others
 	args["cfg"] = cfg
+	//args["site"] = &SiteEngine{}
 	args["app"] = app
 
 	if err = Register(args); err != nil {
