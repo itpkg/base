@@ -11,10 +11,11 @@ import (
 )
 
 type SiteEngine struct {
-	Db     *gorm.DB       `inject:""`
-	Logger *syslog.Writer `inject:""`
-	Router *gin.Engine    `inject:""`
-	I18n   *I18n          `inject:""`
+	Db         *gorm.DB       `inject:""`
+	Logger     *syslog.Writer `inject:""`
+	Router     *gin.Engine    `inject:""`
+	I18n       *I18n          `inject:""`
+	SettingDao *SettingDao    `inject:""`
 }
 
 func (p *SiteEngine) Cron() {
@@ -34,9 +35,16 @@ func (p *SiteEngine) Job() (string, func(message *workers.Msg), float32) {
 }
 
 func (p *SiteEngine) Mount() {
-	p.Router.GET("/site/:key", func(c *gin.Context) {
-		//todo
-		c.String(http.StatusOK, "Hello "+c.Param("key"))
+	p.Router.GET("/site.info", func(c *gin.Context) {
+		locale := c.MustGet("locale").(string)
+		c.JSON(http.StatusOK, gin.H{
+			"title":       p.I18n.T(locale, "site.title"),
+			"keywords":    p.I18n.T(locale, "site.keywords"),
+			"description": p.I18n.T(locale, "site.description"),
+			"author":      p.I18n.T(locale, "site.author"),
+			"copyright":   p.I18n.T(locale, "site.copyright"),
+			"locale":      locale,
+		})
 	})
 }
 
@@ -61,11 +69,11 @@ type Setting struct {
 }
 
 //---------------daos
-type SiteDao struct {
+type SettingDao struct {
 	Helper *Helper `inject:"base.helper"`
 }
 
-func (p *SiteDao) Set(db *gorm.DB, key string, val interface{}, enc bool) error {
+func (p *SettingDao) Set(db *gorm.DB, key string, val interface{}, enc bool) error {
 	dt, err := p.Helper.Obj2bits(val)
 	if err != nil {
 		db.Rollback()
@@ -93,7 +101,7 @@ func (p *SiteDao) Set(db *gorm.DB, key string, val interface{}, enc bool) error 
 	return nil
 }
 
-func (p *SiteDao) Get(db *gorm.DB, key string, val interface{}, enc bool) error {
+func (p *SettingDao) Get(db *gorm.DB, key string, val interface{}, enc bool) error {
 	st := Setting{}
 	db.Where("id = ?", key).First(&st)
 	if st.Val != nil {

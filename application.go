@@ -48,12 +48,16 @@ func (p *Application) Worker(port, threads int) {
 }
 
 func (p *Application) Server() {
+	ro := p.Router
+	ro.Use(Locale())
+	ro.Use(Transactions(p.Db))
+
 	LoopEngine(func(en Engine) error {
 		en.Mount()
 		return nil
 	})
 
-	p.Router.Run(p.Cfg.HttpUrl())
+	ro.Run(p.Cfg.HttpUrl())
 }
 
 func (p *Application) Routes() {

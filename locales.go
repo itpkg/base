@@ -44,8 +44,8 @@ func (p *I18n) T(lang, key string, args ...interface{}) string {
 func (p *I18n) Get(lang, key string) (string, error) {
 	c := p.Redis.Get()
 	defer c.Close()
-	if val, err := c.Do("GET", p.id(lang, key)); err == nil {
-		return val.(string), nil
+	if val, err := redis.String(c.Do("GET", p.id(lang, key))); err == nil {
+		return val, nil
 	} else {
 		return "", err
 	}

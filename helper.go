@@ -11,18 +11,68 @@ import (
 	"encoding/base64"
 	"encoding/gob"
 	"encoding/json"
+	"errors"
+	"fmt"
 	m_rand "math/rand"
 	"os"
 	"os/exec"
 	"syscall"
+	"time"
 
+	"github.com/dgrijalva/jwt-go"
+	"github.com/garyburd/redigo/redis"
 	"github.com/jrallison/go-workers"
+	"github.com/pborman/uuid"
 )
 
 type Helper struct {
-	Key []byte `inject:"hmac.key"`
+	HKey []byte `inject:"hmac.key"`
 	//16、24或者32位的[]byte，分别对应AES-128, AES-192或AES-256算法
-	Cip cipher.Block `inject:"aes.cip"`
+	Cip   cipher.Block `inject:"aes.cip"`
+	Redis *redis.Pool  `inject:""`
+}
+
+func (p *Helper) TokenParse(ticket string) (map[string]interface{}, error) {
+	if ticket, err := jwt.Parse(ticket, func(token *jwt.Token) (interface {}, error) {
+		c := p.Redis.Get()
+		defer c.Close()
+		return redis.Bytes(c.Do("GET", p.tokenId(token.Header["kid"].(string))))
+	}); err == nil {
+		if ticket.Valid {
+			return ticket.Claims["data"].(map[string]interface{}), nil
+		} else {
+			return nil, errors.New("error.bad_token")
+		}
+
+	} else {
+		return nil, err
+	}
+}
+
+func (p *Helper) tokenId(kid string) string {
+	return fmt.Sprintf("token://%s", kid)
+}
+
+func (p *Helper) TokenCreate(data map[string]interface{}, minutes int) (string, error) {
+	kid := uuid.New()
+	key, err := p.RandomBytes(32)
+	if err != nil {
+		return "", err
+	}
+	c := p.Redis.Get()
+	defer c.Close()
+
+	_, err = c.Do("SET", p.tokenId(kid), key, "EX", 60*minutes)
+	if err != nil {
+		return "", err
+	}
+
+	token := jwt.New(jwt.SigningMethodHS512)
+	token.Header["kid"] = kid
+	token.Claims["data"] = data
+	token.Claims["exp"] = time.Now().Add(time.Duration(minutes) * time.Minute).Unix()
+	return token.SignedString(key)
+
 }
 
 func (p *Helper) Shell(cmd string, args ...string) error {
@@ -64,7 +114,7 @@ func (p *Helper) Base64Decode(src []byte) ([]byte, error) {
 }
 
 func (p *Helper) HmacSum(src []byte) []byte {
-	mac := hmac.New(sha512.New, p.Key)
+	mac := hmac.New(sha512.New, p.HKey)
 	mac.Write(src)
 	return mac.Sum(nil)
 }

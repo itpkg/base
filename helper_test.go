@@ -3,7 +3,9 @@ package base_test
 import (
 	"crypto/aes"
 	"testing"
+	"time"
 
+	"github.com/garyburd/redigo/redis"
 	"github.com/itpkg/base"
 )
 
@@ -12,7 +14,27 @@ const hello = "Hello, IT-PACKAGE!!!"
 var key = []byte("11111111111111111111111111111111")
 
 var cip, _ = aes.NewCipher(key)
-var helper = base.Helper{Key: key, Cip: cip}
+
+var redis_p = &redis.Pool{
+	MaxIdle:     3,
+	IdleTimeout: 4 * 60 * time.Second,
+	Dial: func() (redis.Conn, error) {
+		c, err := redis.Dial("tcp", "localhost:6379")
+		if err != nil {
+			return nil, err
+		}
+		if _, err = c.Do("SELECT", 7); err != nil {
+			return nil, err
+		}
+		return c, err
+	},
+	TestOnBorrow: func(c redis.Conn, t time.Time) error {
+		_, err := c.Do("PING")
+		return err
+	},
+}
+
+var helper = base.Helper{HKey: key, Cip: cip, Redis: redis_p}
 
 func TestRandom(t *testing.T) {
 	t.Logf("Random string: %s\t%s", helper.RandomStr(16), helper.RandomStr(16))
@@ -54,4 +76,22 @@ func TestAes(t *testing.T) {
 	if string(src) != hello {
 		t.Errorf("val == %x, want %x", src, hello)
 	}
+}
+
+func TestJwt(t *testing.T) {
+
+	val1 := map[string]interface{}{"id": 100, "uid": "aaa"}
+	tkn, err := helper.TokenCreate(val1, 30)
+	if err == nil {
+		t.Logf("create: %s", tkn)
+	} else {
+		t.Errorf("%v", err)
+	}
+	val2, err1 := helper.TokenParse(tkn)
+	if err1 == nil && val2["aaa"] == val1["aaa"] {
+		t.Logf("parse: %v", val2)
+	} else {
+		t.Errorf("%v", err)
+	}
+
 }
