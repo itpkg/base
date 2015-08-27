@@ -196,12 +196,6 @@ func Run() error {
 				return a.Clear("token://")
 			}),
 		},
-		{
-			Name:   "assets:clear",
-			Usage:  "Clear assets resources",
-			Flags:  []cli.Flag{},
-			Action: callA(func(a *Application, c *cli.Context) error { return a.Clear("assets://") }),
-		},
 	}
 
 	return app.Run(os.Args)

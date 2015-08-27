@@ -78,6 +78,30 @@ type User struct {
 	Permissions []Permission
 }
 
+func (p *User) Is(name string) bool {
+	return p.Has(name, "", 0)
+}
+
+func (p User) Can(name, resource_type string) bool {
+	return p.Has(name, resource_type, 0)
+}
+
+func (p *User) Has(name, resource_type string, resource_id uint) bool {
+	now := time.Now()
+	for _, pm := range p.Permissions {
+		ro := pm.Role
+		if pm.StartUp.Before(now) &&
+			pm.ShutDown.After(now) &&
+			ro != nil &&
+			ro.Name == name &&
+			ro.ResourceType == resource_type &&
+			ro.ResourceID == resource_id {
+			return true
+		}
+	}
+	return false
+}
+
 type Contact struct {
 	Model
 	Qq       string
@@ -114,7 +138,7 @@ type Permission struct {
 	Model
 	User   User
 	UserID uint `sql:"index;not null"`
-	Role   Role
+	Role   *Role
 	RoleID uint `sql:"index;not null"`
 	DateZone
 }

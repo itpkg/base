@@ -33,7 +33,7 @@ type Helper struct {
 }
 
 func (p *Helper) TokenParse(ticket string) (map[string]interface{}, error) {
-	if ticket, err := jwt.Parse(ticket, func(token *jwt.Token) (interface {}, error) {
+	if ticket, err := jwt.Parse(ticket, func(token *jwt.Token) (interface{}, error) {
 		c := p.Redis.Get()
 		defer c.Close()
 		return redis.Bytes(c.Do("GET", p.tokenId(token.Header["kid"].(string))))
