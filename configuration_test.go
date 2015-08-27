@@ -1,17 +1,15 @@
 package base_test
 
 import (
-	"github.com/itpkg/base"
-	"log"
 	"testing"
+
+	"github.com/itpkg/base"
 )
 
 func TestLoadConfig(t *testing.T) {
-	cfg, err := base.Load("../platform/config.yml")
-	if err == nil {
-		log.Printf("Configuration: %v", cfg)
-		log.Printf(cfg.DbUrl())
-	} else {
+	app := base.Application{}
+	err := app.Load("../platform/config.yml", false)
+	if err != nil {
 		t.Errorf("%v", err)
 	}
 }

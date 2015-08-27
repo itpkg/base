@@ -1,14 +1,8 @@
 package base
 
 import (
-	"bytes"
 	"fmt"
-	"log"
-	"os"
 	"strconv"
-	"text/template"
-
-	"gopkg.in/yaml.v2"
 )
 
 type Configuration struct {
@@ -79,36 +73,4 @@ func (p *Configuration) RedisShell() (string, []string) {
 
 func (p *Configuration) RedisUrl() string {
 	return fmt.Sprintf("%s:%d", p.Redis.Host, p.Redis.Port)
-}
-
-//-----------------------------------------------------------------------------
-func Load(file string) (*Configuration, error) {
-	_, err := os.Stat(file)
-	if err == nil {
-		config := Configuration{}
-		log.Printf("Load from config file: %s", file)
-
-		var tmp *template.Template
-		tmp, err = template.ParseFiles(file)
-		if err != nil {
-			return nil, err
-		}
-
-		vars := make(map[string]interface{}, 0)
-
-		vars["Env"] = os.Getenv("ITPKG_ENV")
-		vars["Secrets"] = os.Getenv("ITPKG_SECRETS")
-		vars["DbPassword"] = os.Getenv("ITPKG_DATABASE_PASSWORD")
-
-		var buf bytes.Buffer
-
-		if err = tmp.Execute(&buf, vars); err != nil {
-			return nil, err
-		}
-		if err = yaml.Unmarshal(buf.Bytes(), &config); err != nil {
-			return nil, err
-		}
-		return &config, nil
-	}
-	return nil, err
 }
