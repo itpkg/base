@@ -28,7 +28,7 @@ func (p *SiteEngine) Migrate(db *gorm.DB) {
 	db.Model(&Locale{}).AddUniqueIndex("idx_locales_key_lang", "key", "lang")
 }
 
-func (p *SiteEngine) Seed(db *gorm.DB) error {
+func (p *SiteEngine) Seed(db *gorm.DB, aes *Aes, hmac *Hmac) error {
 	tx := db.Begin()
 	path := "locales"
 	if files, err := ioutil.ReadDir(path); err == nil {
@@ -51,7 +51,7 @@ func (p *SiteEngine) Seed(db *gorm.DB) error {
 }
 
 func (p *SiteEngine) Info() (name string, version string, desc string) {
-	return "site", "v20150826", "site framework"
+	return "site", "v20150826", "site module"
 }
 
 //---------models

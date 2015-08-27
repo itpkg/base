@@ -42,23 +42,26 @@ func (p *application) Migrate() {
 
 func (p *application) Seed() error {
 	return p.loop(func(en Engine) error {
-		if val, err := p.mrt.Invoke(en.Seed); err == nil {
-			ret := val[0].Interface()
-			if ret == nil {
-				return nil
-			} else {
-				return ret.(error)
-			}
-		} else {
-			return err
-		}
+		_, err := p.mrt.Invoke(en.Seed)
+		return err
+		//		if val, err := p.mrt.Invoke(en.Seed); err == nil {
+		//
+		//			ret := val[0].Interface()
+		//			if ret == nil {
+		//				return nil
+		//			} else {
+		//				return ret.(error)
+		//			}
+		//		} else {
+		//			return err
+		//		}
 
 	})
 }
 
 func (p *application) loop(fn func(en Engine) error) error {
 	for _, en := range p.engines {
-		if err := fn(en); en != nil {
+		if err := fn(en); err != nil {
 			return err
 		}
 	}
@@ -263,9 +266,9 @@ func New(name string) (Application, error) {
 	}
 	mrt.Map(&aes)
 
-	//hmax
+	//hmac
 	hmac := Hmac{}
-	hmac.Init([]byte(cfg.Secrets[40:56]))
+	hmac.Init([]byte(cfg.Secrets[20:52]))
 	mrt.Map(&hmac)
 
 	app := &application{
@@ -274,6 +277,7 @@ func New(name string) (Application, error) {
 	}
 
 	app.Register(&SiteEngine{})
+	app.Register(&AuthEngine{})
 	return app, nil
 
 }
