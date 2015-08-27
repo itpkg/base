@@ -1,8 +1,6 @@
 package base
 
 import (
-	"fmt"
-	"io/ioutil"
 	"log/syslog"
 	"net/http"
 
@@ -10,13 +8,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	"github.com/jrallison/go-workers"
-	"github.com/magiconair/properties"
 )
 
 type SiteEngine struct {
 	Db     *gorm.DB       `inject:""`
 	Logger *syslog.Writer `inject:""`
 	Router *gin.Engine    `inject:""`
+	I18n   *I18n          `inject:""`
 }
 
 func (p *SiteEngine) Cron() {
@@ -44,32 +42,11 @@ func (p *SiteEngine) Mount() {
 
 func (p *SiteEngine) Migrate() {
 	db := p.Db
-
 	db.AutoMigrate(&Setting{})
-	db.AutoMigrate(&Locale{})
-	db.Model(&Locale{}).AddUniqueIndex("idx_locales_key_lang", "key", "lang")
 }
 
 func (p *SiteEngine) Seed() error {
-	tx := p.Db.Begin()
-	path := "locales"
-	if files, err := ioutil.ReadDir(path); err == nil {
-		for _, f := range files {
-			fn := f.Name()
-			lang := fn[0:(len(fn) - 11)]
-			prop := properties.MustLoadFile(path+"/"+fn, properties.UTF8)
-			for _, k := range prop.Keys() {
-				if err = tx.Create(&Locale{Lang: lang, Key: k, Val: prop.MustGetString(k)}).Error; err != nil {
-					tx.Rollback()
-					return err
-				}
-			}
-		}
-		tx.Commit()
-		return nil
-	} else {
-		return err
-	}
+	return p.I18n.Load("locales")
 }
 
 func (p *SiteEngine) Info() (name string, version string, desc string) {
@@ -81,13 +58,6 @@ type Setting struct {
 	ID  string `gorm:"primary_key"`
 	Val []byte `sql:"not null"`
 	Iv  []byte `sql:"size:32"`
-}
-
-type Locale struct {
-	ID   uint   `gorm:"primary_key"`
-	Key  string `sql:"not null;size:255;index"`
-	Val  string `sql:"not null;type:TEXT"`
-	Lang string `sql:"not null;size:5;index;default:'en_US'"`
 }
 
 //---------------daos
@@ -137,34 +107,6 @@ func (p *SiteDao) Get(db *gorm.DB, key string, val interface{}, enc bool) error 
 		return p.Helper.Bits2obj(dt, val)
 	}
 	return nil
-}
-
-type LocaleDao struct {
-}
-
-func (p *LocaleDao) T(db *gorm.DB, lang, key string, args ...interface{}) string {
-	v := p.Get(db, lang, key)
-	if v == "" {
-		return fmt.Sprintf("Translation [%s] not found", key)
-	}
-	return fmt.Sprintf(v, args...)
-}
-
-func (p *LocaleDao) Get(db *gorm.DB, lang, key string) string {
-	l := Locale{Lang: lang, Key: key}
-	db.Where("lang = ? AND key = ?", lang, key).First(&l)
-	return l.Val
-}
-
-func (p *LocaleDao) Set(db *gorm.DB, lang, key, val string) {
-	l := Locale{Lang: lang, Key: key}
-	db.Where("lang = ? AND key = ?", lang, key).First(&l)
-	if l.Val == "" {
-		db.Create(&Locale{Key: key, Lang: lang, Val: val})
-	} else {
-		db.Model(&l).Updates(Locale{Val: val})
-	}
-
 }
 
 func init() {

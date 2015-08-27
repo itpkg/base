@@ -9,8 +9,13 @@ import (
 
 func TestContextLoad(t *testing.T) {
 	ctx := base.Context{}
-	err := ctx.Load("../platform/config.yml")
+	err := ctx.Load("../platform/config.yml", true)
 	if err != nil {
 		t.Errorf("%v", err)
 	}
+	err = ctx.Load("../platform/config.yml", false)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
+
 }
