@@ -77,8 +77,15 @@ func Run() error {
 					Usage: "stats port",
 					Value: 11111,
 				},
+				cli.BoolFlag{
+					Name:  "dispatcher, d",
+					Usage: "with dispatcher?",
+				},
 			},
 			Action: callA(func(a Application, c *cli.Context) error {
+				if c.Bool("dispatcher") {
+					a.Dispatcher()
+				}
 				a.Worker(c.Int("port"), c.Int("threads"))
 				return nil
 			}),

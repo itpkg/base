@@ -17,6 +17,7 @@ import (
 )
 
 type Application interface {
+	Dispatcher()
 	Server()
 	Worker(port, threads int)
 	Migrate()
@@ -33,18 +34,17 @@ type application struct {
 	engines []Engine
 }
 
+func (p *application) Dispatcher() {
+	p.loop(func(en Engine) error {
+		en.Cron()
+		return nil
+	})
+
+}
+
 func (p *application) Worker(port, threads int) {
-	cfg := p.mrt.Injector.Get(reflect.TypeOf((*Configuration)(nil))).Interface().(*Configuration)
 	logger := p.mrt.Injector.Get(reflect.TypeOf((*syslog.Writer)(nil))).Interface().(*syslog.Writer)
 	logger.Info("Startup worker progress")
-
-	workers.Configure(map[string]string{
-		"server":   cfg.RedisUrl(),
-		"database": strconv.Itoa(cfg.Redis.Db),
-		"pool":     strconv.Itoa(threads * 2),
-		"process":  uuid.New(),
-	})
-	workers.Middleware.Append(&JobMiddleware{logger: logger})
 
 	p.loop(func(en Engine) error {
 		queue, call, pri := en.Job()
@@ -321,6 +321,15 @@ func New(name string) (Application, error) {
 		en.Mount(mrt)
 		return nil
 	})
+
+	workers.Configure(map[string]string{
+		"server":   cfg.RedisUrl(),
+		"database": strconv.Itoa(cfg.Redis.Db),
+		"pool":     "12",
+		"process":  uuid.New(),
+	})
+	workers.Middleware.Append(&JobMiddleware{logger: logger})
+
 	return app, nil
 
 }

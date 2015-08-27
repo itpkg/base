@@ -3,8 +3,10 @@ package base
 import (
 	"fmt"
 	"io/ioutil"
+	"log/syslog"
 	"reflect"
 
+	"github.com/carlescere/scheduler"
 	"github.com/go-martini/martini"
 	"github.com/jinzhu/gorm"
 	"github.com/jrallison/go-workers"
@@ -12,7 +14,18 @@ import (
 )
 
 type SiteEngine struct {
-	db *gorm.DB
+	db     *gorm.DB
+	logger *syslog.Writer
+}
+
+func (p *SiteEngine) Cron() {
+	job := func() {
+		p.logger.Info("Generate sitemap.xml")
+		//todo
+		p.logger.Info("Generate rss.atom")
+		//todo
+	}
+	scheduler.Every().Day().At("03:00").Run(job)
 }
 
 func (p *SiteEngine) Job() (string, func(message *workers.Msg), float32) {
@@ -23,6 +36,8 @@ func (p *SiteEngine) Job() (string, func(message *workers.Msg), float32) {
 
 func (p *SiteEngine) Mount(mrt *martini.ClassicMartini) {
 	p.db = mrt.Injector.Get(reflect.TypeOf((*gorm.DB)(nil))).Interface().(*gorm.DB)
+	p.logger = mrt.Injector.Get(reflect.TypeOf((*syslog.Writer)(nil))).Interface().(*syslog.Writer)
+
 	mrt.Get("/site/:key", func(params martini.Params) string {
 		//todo
 		return "Hello " + params["key"]

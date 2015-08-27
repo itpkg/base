@@ -16,6 +16,10 @@ type AuthEngine struct {
 	hmac *Hmac
 }
 
+func (p *AuthEngine) Cron() {
+
+}
+
 func (p *AuthEngine) Job() (string, func(message *workers.Msg), float32) {
 	return "", nil, 0.0
 }

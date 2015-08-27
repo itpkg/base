@@ -17,3 +17,7 @@ func (p *JobMiddleware) Call(queue string, message *workers.Msg, next func() boo
 	p.logger.Info(fmt.Sprintf("END JOB %s@%s", message.Jid(), queue))
 	return
 }
+
+func RunOnBack(queue, class string, args interface{}) {
+	workers.Enqueue(queue, class, args)
+}

@@ -6,6 +6,7 @@ import (
 )
 
 type Engine interface {
+	Cron()
 	Job() (string, func(message *workers.Msg), float32)
 	Mount(mrt *martini.ClassicMartini)
 	Migrate()
