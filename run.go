@@ -12,7 +12,7 @@ func Run() error {
 	callA := func(f func(app *Application, ctx *cli.Context) error) func(c *cli.Context) {
 		return func(c *cli.Context) {
 			gc := Context{}
-			e := gc.Load(c.GlobalString("config"), true)
+			e := gc.Load(c.GlobalString("environment"), c.GlobalString("config"), true)
 
 			if e == nil {
 				e = f(Get("base.app").(*Application), c)
@@ -29,7 +29,7 @@ func Run() error {
 	callHC := func(f func(hlp *Helper, cfg *Configuration, ctx *cli.Context) error) func(c *cli.Context) {
 		return func(c *cli.Context) {
 			gc := Context{}
-			e := gc.Load(c.GlobalString("config"), false)
+			e := gc.Load(c.GlobalString("environment"), c.GlobalString("config"), false)
 
 			if e == nil {
 				e = f(Get("base.helper").(*Helper), Get("base.cfg").(*Configuration), c)

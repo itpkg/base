@@ -23,7 +23,7 @@ import (
 type Context struct {
 }
 
-func (p *Context) Load(file string, ping bool) error {
+func (p *Context) Load(env, file string, ping bool) error {
 	logger, err := syslog.New(syslog.LOG_LOCAL7, "itpkg")
 	if err != nil {
 		return err
@@ -46,7 +46,7 @@ func (p *Context) Load(file string, ping bool) error {
 
 	vars := make(map[string]interface{}, 0)
 
-	vars["Env"] = os.Getenv("ITPKG_ENV")
+	vars["Env"] = env
 	vars["Secrets"] = os.Getenv("ITPKG_SECRETS")
 	vars["DbPassword"] = os.Getenv("ITPKG_DATABASE_PASSWORD")
 
