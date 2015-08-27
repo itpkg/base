@@ -1,123 +1,214 @@
 package base
 
 import (
-	"bytes"
-	"crypto/aes"
-	"crypto/cipher"
 	"fmt"
 	"log/syslog"
 	"os"
 	"text/template"
-	"time"
 
-	"github.com/facebookgo/inject"
 	"github.com/garyburd/redigo/redis"
+	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
-	"gopkg.in/yaml.v2"
+	"github.com/jrallison/go-workers"
 )
 
 type Application struct {
-	beans inject.Graph
+	Db     *gorm.DB       `inject:""`
+	Redis  *redis.Pool    `inject:""`
+	Logger *syslog.Writer `inject:""`
+	Cfg    *Configuration `inject:""`
+	Router *gin.Engine    `inject:""`
+	Helper *Helper        `inject:""`
 }
 
-func (p *Application) Map(name string, value interface{}) {
-	p.beans.Provide(&inject.Object{Value: value, Name: name})
+func (p *Application) Dispatcher() {
+	p.loop(func(en Engine) error {
+		en.Cron()
+		return nil
+	})
+
 }
 
-func (p *Application) Load(file string, ping bool) error {
-	logger, err := syslog.New(syslog.LOG_LOCAL7, "itpkg")
-	if err != nil {
-		return err
+func (p *Application) Worker(port, threads int) {
+
+	p.Logger.Info("Startup worker progress")
+
+	p.loop(func(en Engine) error {
+		queue, call, pri := en.Job()
+		if queue != "" {
+			workers.Process(queue, call, int(float32(threads)*pri)+1)
+		}
+		return nil
+	})
+
+	p.Logger.Info(fmt.Sprintf("Stats will be available at http://localhost:%d/stats", port))
+	go workers.StatsServer(port)
+
+	workers.Run()
+}
+
+func (p *Application) Server() {
+	p.Router.Run(p.Cfg.HttpUrl())
+}
+
+func (p *Application) Routes() {
+	//todo
+	for _, h := range p.Router.Handlers {
+		fmt.Printf("%v", h)
 	}
-	p.Map("logger", logger)
+}
 
-	_, err = os.Stat(file)
-	if err != nil {
-		return err
-	}
+func (p *Application) Migrate() {
+	p.loop(func(en Engine) error {
+		en.Migrate()
+		return nil
+	})
+}
 
-	cfg := Configuration{}
-	logger.Info(fmt.Sprintf("Load from config file: %s", file))
+func (p *Application) Seed() error {
+	return p.loop(func(en Engine) error {
+		return en.Seed()
 
-	var tmp *template.Template
-	tmp, err = template.ParseFiles(file)
-	if err != nil {
-		return err
-	}
+	})
+}
 
-	vars := make(map[string]interface{}, 0)
-
-	vars["Env"] = os.Getenv("ITPKG_ENV")
-	vars["Secrets"] = os.Getenv("ITPKG_SECRETS")
-	vars["DbPassword"] = os.Getenv("ITPKG_DATABASE_PASSWORD")
-
-	var buf bytes.Buffer
-
-	if err = tmp.Execute(&buf, vars); err != nil {
-		return err
-	}
-	if err = yaml.Unmarshal(buf.Bytes(), &cfg); err != nil {
-		return err
-	}
-	if ping {
-		if err = p.ping(&cfg); err != nil {
+func (p *Application) loop(fn func(en Engine) error) error {
+	for _, en := range engines {
+		if err := fn(en); err != nil {
 			return err
 		}
 	}
-	p.Map("cfg", &cfg)
 	return nil
+}
+
+func (p *Application) Openssl() {
+	args := make(map[string]interface{}, 0)
+
+	//todo 加载domain
+	args["domain"] = "localhost"
+	t := template.Must(template.New("ssl.sh").Parse(
+		`
+openssl genrsa -out root-key.pem 2048
+openssl req -new -key root-key.pem -out root-req.csr -text
+openssl x509 -req -in root-req.csr -out root-cert.pem -sha512 -signkey root-key.pem -days 3650 -text -extfile /etc/ssl/openssl.cnf -extensions v3_ca
+
+openssl genrsa -out {{.domain}}-key.pem 2048
+openssl req -new -key {{.domain}}-key.pem -out {{.domain}}-req.csr -text
+openssl x509 -req -in {{.domain}}-req.csr -CA root-cert.pem -CAkey root-key.pem -CAcreateserial -days 3650 -out {{.domain}}-cert.pem -text
+
+openssl verify -CAfile root-cert.pem {{.domain}}-cert.pem
+openssl rsa -noout -text -in {{.domain}}-key.pem
+openssl req -noout -text -in {{.domain}}-req.csr
+openssl x509 -noout -text -in {{.domain}}-cert.pem
+`))
+
+	t.Execute(os.Stdout, args)
 
 }
 
-func (p *Application) ping(cfg *Configuration) error {
-	err := p.beans.Populate()
-	if err != nil {
-		return err
-	}
+func (p *Application) Nginx() {
 
-	//database
-	var db gorm.DB
-	db, err = gorm.Open("postgres", cfg.DbUrl())
-	if err != nil {
-		return err
-	}
-	db.LogMode(!cfg.IsProduction())
-	if err = db.DB().Ping(); err != nil {
-		return err
-	}
-	db.DB().SetMaxIdleConns(12)
-	db.DB().SetMaxOpenConns(120)
-	p.Map("db", &db)
+	args := make(map[string]interface{}, 0)
+	//todo 加载domain
+	args["domain"] = "localhost"
+	args["host"] = p.Cfg.Http.Host
+	args["port"] = p.Cfg.Http.Port
+	args["pwd"], _ = os.Getwd()
 
-	//redis
-	p.Map("redis", &redis.Pool{
-		MaxIdle:     3,
-		IdleTimeout: 4 * 60 * time.Second,
-		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", cfg.RedisUrl())
-			if err != nil {
-				return nil, err
-			}
-			if _, err = c.Do("SELECT", cfg.Redis.Db); err != nil {
-				return nil, err
-			}
-			return c, err
-		},
-		TestOnBorrow: func(c redis.Conn, t time.Time) error {
-			_, err := c.Do("PING")
-			return err
-		},
-	})
+	t := template.Must(template.New("ssl.sh").Parse(
 
-	//helper
-	var cip cipher.Block
-	if cip, err = aes.NewCipher([]byte(cfg.Secrets[60:92])); err != nil {
-		return err
+		`
+upstream {{.domain}}.conf {
+server http://{{.host}}:{{.port}} fail_timeout=0;
+}
+
+
+server {
+listen 443;
+ssl  on;
+ssl_certificate  ssl/{{.domain}}-cert.pem;
+ssl_certificate_key  ssl/{{.domain}}-key.pem;
+ssl_session_timeout  5m;
+ssl_protocols  SSLv2 SSLv3 TLSv1;
+ssl_ciphers  RC4:HIGH:!aNULL:!MD5;
+ssl_prefer_server_ciphers  on;
+
+client_max_body_size 4G;
+keepalive_timeout 10;
+
+server_name {{.domain}} www.{{.domain}};
+
+root {{.pwd}}/public;
+try_files $uri $uri/index.html @{{.domain}}.conf;
+
+location @{{.domain}}.conf {
+proxy_set_header X-Forwarded-Proto https;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_set_header Host $http_host;
+proxy_set_header  X-Real-IP $remote_addr;
+proxy_redirect off;
+proxy_pass http://{{.domain}}.conf;
+# limit_req zone=one;
+access_log log/{{.domain}}.access.log;
+error_log log/{{.domain}}.error.log;
+}
+
+location ~* \.(?:css|js|html|jpg|jpeg|gif|png|ico)$ {
+gzip_static on;
+expires max;
+add_header Cache-Control public;
+}
+
+location = /50x.html {
+root html;
+}
+
+location = /404.html {
+root html;
+}
+
+location @503 {
+error_page 405 = /system/maintenance.html;
+if (-f $document_root/system/maintenance.html) {
+rewrite ^(.*)$ /system/maintenance.html break;
+}
+rewrite ^(.*)$ /503.html break;
+}
+
+if ($request_method !~ ^(GET|HEAD|PUT|PATCH|POST|DELETE|OPTIONS)$ ){
+return 405;
+}
+
+if (-f $document_root/system/maintenance.html) {
+return 503;
+}
+
+location ~ \.(php|jsp|asp)$ {
+return 405;
+}
+
+}
+`))
+
+	t.Execute(os.Stdout, args)
+
+}
+
+func (p *Application) Clear(pat string) error {
+	r := p.Redis.Get()
+	defer r.Close()
+
+	v, e := r.Do("KEYS", pat)
+	if e != nil {
+		return e
 	}
-	p.Map("aes.cip", cip)
-	p.Map("hmac.key", []byte(cfg.Secrets[20:84]))
-	p.Map("helper", Helper{})
-
-	err = p.beans.Populate()
-	return err
+	ks := v.([]interface{})
+	if len(ks) == 0 {
+		return nil
+	}
+	_, e = r.Do("DEL", ks...)
+	if e != nil {
+		return e
+	}
+	return nil
 }

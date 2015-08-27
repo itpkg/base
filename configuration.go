@@ -6,6 +6,7 @@ import (
 )
 
 type Configuration struct {
+	Name    string
 	Env     string
 	Secrets string
 	Http    struct {
@@ -73,4 +74,8 @@ func (p *Configuration) RedisShell() (string, []string) {
 
 func (p *Configuration) RedisUrl() string {
 	return fmt.Sprintf("%s:%d", p.Redis.Host, p.Redis.Port)
+}
+
+func (p *Configuration) HttpUrl() string {
+	return fmt.Sprintf("%s:%d", p.Http.Host, p.Http.Port)
 }

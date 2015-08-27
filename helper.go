@@ -15,6 +15,8 @@ import (
 	"os"
 	"os/exec"
 	"syscall"
+
+	"github.com/jrallison/go-workers"
 )
 
 type Helper struct {
@@ -118,4 +120,8 @@ func (p *Helper) Obj2json(o interface{}) (string, error) {
 
 func (p *Helper) Json2obj(j string, o interface{}) error {
 	return json.Unmarshal([]byte(j), o)
+}
+
+func (p *Helper) BackJob(queue, class string, args interface{}) {
+	workers.Enqueue(queue, class, args)
 }
