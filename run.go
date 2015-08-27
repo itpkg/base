@@ -15,7 +15,7 @@ func Run() error {
 			e := gc.Load(c.GlobalString("config"), true)
 
 			if e == nil {
-				e = f(gc.Get("base.app").(*Application), c)
+				e = f(Get("base.app").(*Application), c)
 				return
 			}
 			if e == nil {
@@ -32,7 +32,7 @@ func Run() error {
 			e := gc.Load(c.GlobalString("config"), false)
 
 			if e == nil {
-				e = f(gc.Get("base.helper").(*Helper), gc.Get("base.cfg").(*Configuration), c)
+				e = f(Get("base.helper").(*Helper), Get("base.cfg").(*Configuration), c)
 				return
 			}
 			if e == nil {

@@ -16,13 +16,13 @@ type Application struct {
 	Db     *gorm.DB       `inject:""`
 	Redis  *redis.Pool    `inject:""`
 	Logger *syslog.Writer `inject:""`
-	Cfg    *Configuration `inject:""`
+	Cfg    *Configuration `inject:"base.cfg"`
 	Router *gin.Engine    `inject:""`
 	Helper *Helper        `inject:""`
 }
 
 func (p *Application) Dispatcher() {
-	p.loop(func(en Engine) error {
+	LoopEngine(func(en Engine) error {
 		en.Cron()
 		return nil
 	})
@@ -33,7 +33,7 @@ func (p *Application) Worker(port, threads int) {
 
 	p.Logger.Info("Startup worker progress")
 
-	p.loop(func(en Engine) error {
+	LoopEngine(func(en Engine) error {
 		queue, call, pri := en.Job()
 		if queue != "" {
 			workers.Process(queue, call, int(float32(threads)*pri)+1)
@@ -48,6 +48,11 @@ func (p *Application) Worker(port, threads int) {
 }
 
 func (p *Application) Server() {
+	LoopEngine(func(en Engine) error {
+		en.Mount()
+		return nil
+	})
+
 	p.Router.Run(p.Cfg.HttpUrl())
 }
 
@@ -59,26 +64,21 @@ func (p *Application) Routes() {
 }
 
 func (p *Application) Migrate() {
-	p.loop(func(en Engine) error {
+	for _, ext := range []string{"uuid-ossp", "pgcrypto"} {
+		p.Db.Exec(fmt.Sprintf("CREATE EXTENSION IF NOT EXISTS \"%s\"", ext))
+	}
+
+	LoopEngine(func(en Engine) error {
 		en.Migrate()
 		return nil
 	})
 }
 
 func (p *Application) Seed() error {
-	return p.loop(func(en Engine) error {
+	return LoopEngine(func(en Engine) error {
 		return en.Seed()
 
 	})
-}
-
-func (p *Application) loop(fn func(en Engine) error) error {
-	for _, en := range engines {
-		if err := fn(en); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (p *Application) Openssl() {

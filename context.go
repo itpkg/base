@@ -21,25 +21,6 @@ import (
 )
 
 type Context struct {
-	beans inject.Graph
-}
-
-func (p *Context) Get(name string) interface{} {
-	for _, o := range p.beans.Objects() {
-		if name == o.Name {
-			return o.Value
-		}
-	}
-	return nil
-}
-
-func (p *Context) Map(name string, value interface{}) {
-	if name == "" {
-		p.beans.Provide(&inject.Object{Value: value})
-	} else {
-		p.beans.Provide(&inject.Object{Value: value, Name: name})
-	}
-
 }
 
 func (p *Context) Load(file string, ping bool) error {
@@ -47,7 +28,7 @@ func (p *Context) Load(file string, ping bool) error {
 	if err != nil {
 		return err
 	}
-	p.Map("", logger)
+	Map(logger)
 
 	_, err = os.Stat(file)
 	if err != nil {
@@ -77,16 +58,16 @@ func (p *Context) Load(file string, ping bool) error {
 	if err = yaml.Unmarshal(buf.Bytes(), &cfg); err != nil {
 		return err
 	}
-	p.Map("base.cfg", &cfg)
+	MapTo("base.cfg", &cfg)
 
 	//helper
 	var cip cipher.Block
 	if cip, err = aes.NewCipher([]byte(cfg.Secrets[60:92])); err != nil {
 		return err
 	}
-	p.Map("aes.cip", cip)
-	p.Map("hmac.key", []byte(cfg.Secrets[20:84]))
-	p.Map("base.helper", &Helper{})
+	MapTo("aes.cip", cip)
+	MapTo("hmac.key", []byte(cfg.Secrets[20:84]))
+	MapTo("base.helper", &Helper{})
 
 	if ping {
 		if err = p.ping(&cfg, logger); err != nil {
@@ -94,7 +75,7 @@ func (p *Context) Load(file string, ping bool) error {
 		}
 	}
 
-	err = p.beans.Populate()
+	err = beans.Populate()
 	return err
 
 }
@@ -112,10 +93,10 @@ func (p *Context) ping(cfg *Configuration, logger *syslog.Writer) error {
 	}
 	db.DB().SetMaxIdleConns(12)
 	db.DB().SetMaxOpenConns(120)
-	p.Map("", &db)
+	Map(&db)
 
 	//redis
-	p.Map("", &redis.Pool{
+	Map(&redis.Pool{
 		MaxIdle:     3,
 		IdleTimeout: 4 * 60 * time.Second,
 		Dial: func() (redis.Conn, error) {
@@ -147,13 +128,45 @@ func (p *Context) ping(cfg *Configuration, logger *syslog.Writer) error {
 	if cfg.IsProduction() {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	p.Map("", gin.Default())
+	Map(gin.Default())
 
-	//engines
-	for _, en := range engines {
-		en.Mount()
-	}
-	p.Map("base.app", &Application{})
+	MapTo("base.app", &Application{})
 
 	return nil
+}
+
+//-----------------------------------------------------------------------------
+
+var beans inject.Graph
+
+func Get(name string) interface{} {
+	for _, o := range beans.Objects() {
+		if name == o.Name {
+			return o.Value
+		}
+	}
+	return nil
+}
+
+func Map(value interface{}) {
+	beans.Provide(&inject.Object{Value: value})
+}
+
+func MapTo(name string, value interface{}) {
+	beans.Provide(&inject.Object{Value: value, Name: name})
+}
+
+func LoopEngine(fn func(en Engine) error) error {
+	for _, o := range beans.Objects() {
+		switch o.Value.(type) {
+		case Engine:
+			if e := fn(o.Value.(Engine)); e != nil {
+				return e
+			}
+		default:
+
+		}
+	}
+	return nil
+
 }

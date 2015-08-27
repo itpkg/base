@@ -6,7 +6,6 @@ import (
 )
 
 type Configuration struct {
-	Name    string
 	Env     string
 	Secrets string
 	Http    struct {

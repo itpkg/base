@@ -12,9 +12,3 @@ type Engine interface {
 	Seed() error
 	Info() (name string, version string, desc string)
 }
-
-var engines = make([]Engine, 0)
-
-func Register(en Engine) {
-	engines = append(engines, en)
-}
