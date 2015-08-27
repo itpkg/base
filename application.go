@@ -278,6 +278,11 @@ func New(name string) (Application, error) {
 
 	app.Register(&SiteEngine{})
 	app.Register(&AuthEngine{})
+
+	app.loop(func(en Engine) error {
+		en.Mount(mrt)
+		return nil
+	})
 	return app, nil
 
 }

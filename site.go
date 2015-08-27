@@ -3,22 +3,26 @@ package base
 import (
 	"fmt"
 	"io/ioutil"
+	"reflect"
 
+	"github.com/go-martini/martini"
 	"github.com/jinzhu/gorm"
 	"github.com/magiconair/properties"
 )
 
 type SiteEngine struct {
+	db *gorm.DB
 }
 
 func (p *SiteEngine) Job() {
 
 }
-func (p *SiteEngine) Mount() {
-
+func (p *SiteEngine) Mount(mrt *martini.ClassicMartini) {
+	p.db = mrt.Injector.Get(reflect.TypeOf((*gorm.DB)(nil))).Interface().(*gorm.DB)
 }
 
-func (p *SiteEngine) Migrate(db *gorm.DB) {
+func (p *SiteEngine) Migrate() {
+	db := p.db
 	for _, ext := range []string{"uuid-ossp", "pgcrypto"} {
 		db.Exec(fmt.Sprintf("CREATE EXTENSION IF NOT EXISTS \"%s\"", ext))
 	}
@@ -28,8 +32,8 @@ func (p *SiteEngine) Migrate(db *gorm.DB) {
 	db.Model(&Locale{}).AddUniqueIndex("idx_locales_key_lang", "key", "lang")
 }
 
-func (p *SiteEngine) Seed(db *gorm.DB, aes *Aes, hmac *Hmac) error {
-	tx := db.Begin()
+func (p *SiteEngine) Seed() error {
+	tx := p.db.Begin()
 	path := "locales"
 	if files, err := ioutil.ReadDir(path); err == nil {
 		for _, f := range files {

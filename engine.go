@@ -1,13 +1,13 @@
 package base
 
 import (
-	"github.com/jinzhu/gorm"
+	"github.com/go-martini/martini"
 )
 
 type Engine interface {
 	Job()
-	Mount()
-	Migrate(*gorm.DB)
-	Seed(*gorm.DB, *Aes, *Hmac) error
+	Mount(mrt *martini.ClassicMartini)
+	Migrate()
+	Seed() error
 	Info() (name string, version string, desc string)
 }

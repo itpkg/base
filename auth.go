@@ -2,22 +2,29 @@ package base
 
 import (
 	"errors"
+	"reflect"
 	"time"
 
+	"github.com/go-martini/martini"
 	"github.com/jinzhu/gorm"
 	"github.com/pborman/uuid"
 )
 
 type AuthEngine struct {
+	db   *gorm.DB
+	hmac *Hmac
 }
 
 func (p *AuthEngine) Job() {
 
 }
-func (p *AuthEngine) Mount() {
+func (p *AuthEngine) Mount(mrt *martini.ClassicMartini) {
+	p.db = mrt.Injector.Get(reflect.TypeOf((*gorm.DB)(nil))).Interface().(*gorm.DB)
+	p.hmac = mrt.Injector.Get(reflect.TypeOf((*Hmac)(nil))).Interface().(*Hmac)
 
 }
-func (p *AuthEngine) Migrate(db *gorm.DB) {
+func (p *AuthEngine) Migrate() {
+	db := p.db
 	db.AutoMigrate(&Contact{})
 	db.AutoMigrate(&User{})
 	db.Model(&User{}).AddUniqueIndex("idx_users_login", "token", "provider")
@@ -28,14 +35,17 @@ func (p *AuthEngine) Migrate(db *gorm.DB) {
 	db.Model(&Permission{}).AddUniqueIndex("idx_permissions_role_user", "role_id", "user_id")
 }
 
-func (p *AuthEngine) Seed(db *gorm.DB, aes *Aes, hmac *Hmac) error {
-	authDao := AuthDao{db: db, hmac: hmac}
+func (p *AuthEngine) Seed() error {
+	tx := p.db.Begin()
+	authDao := AuthDao{db: tx, hmac: p.hmac}
+
 	user, err := authDao.AddByEmail("root@localhost", "root", "changeme")
 	if err == nil {
 		authDao.Confirm(user.ID)
 		authDao.AddRole(user.ID, "root", "", 0, nil, nil)
 		authDao.AddRole(user.ID, "admin", "", 0, nil, nil)
 	}
+	tx.Commit()
 	return err
 }
 
@@ -113,6 +123,7 @@ func (p *AuthDao) AddByEmail(email, name, password string) (*User, error) {
 	var c int
 	p.db.Model(User{}).Where("email = ? AND provider = ?", email, "email").Count(&c)
 	if c > 0 {
+		p.db.Rollback()
 		return nil, errors.New("email already exist")
 	}
 	u := User{
