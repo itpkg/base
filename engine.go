@@ -2,10 +2,11 @@ package base
 
 import (
 	"github.com/go-martini/martini"
+	"github.com/jrallison/go-workers"
 )
 
 type Engine interface {
-	Job()
+	Job() (string, func(message *workers.Msg), float32)
 	Mount(mrt *martini.ClassicMartini)
 	Migrate()
 	Seed() error

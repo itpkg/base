@@ -5,19 +5,24 @@ import (
 	"log/syslog"
 	"os"
 	"reflect"
+	"strconv"
 	"text/template"
 	"time"
 
 	"github.com/garyburd/redigo/redis"
 	"github.com/go-martini/martini"
 	"github.com/jinzhu/gorm"
+	"github.com/jrallison/go-workers"
+	"github.com/pborman/uuid"
 )
 
 type Application interface {
 	Server()
+	Worker(port, threads int)
 	Migrate()
 	Seed() error
 	Nginx()
+	Routes()
 	Openssl()
 	Clear(pat string) error
 	Register(en Engine)
@@ -28,9 +33,42 @@ type application struct {
 	engines []Engine
 }
 
+func (p *application) Worker(port, threads int) {
+	cfg := p.mrt.Injector.Get(reflect.TypeOf((*Configuration)(nil))).Interface().(*Configuration)
+	logger := p.mrt.Injector.Get(reflect.TypeOf((*syslog.Writer)(nil))).Interface().(*syslog.Writer)
+	logger.Info("Startup worker progress")
+
+	workers.Configure(map[string]string{
+		"server":   cfg.RedisUrl(),
+		"database": strconv.Itoa(cfg.Redis.Db),
+		"pool":     strconv.Itoa(threads * 2),
+		"process":  uuid.New(),
+	})
+	workers.Middleware.Append(&JobMiddleware{logger: logger})
+
+	p.loop(func(en Engine) error {
+		queue, call, pri := en.Job()
+		if queue != "" {
+			workers.Process(queue, call, int(float32(threads)*pri)+1)
+		}
+		return nil
+	})
+
+	logger.Info(fmt.Sprintf("Stats will be available at http://localhost:%d/stats", port))
+	go workers.StatsServer(port)
+
+	workers.Run()
+}
+
 func (p *application) Server() {
 	cfg := p.mrt.Injector.Get(reflect.TypeOf((*Configuration)(nil))).Interface().(*Configuration)
 	p.mrt.RunOnAddr(fmt.Sprintf("%s:%d", cfg.Http.Host, cfg.Http.Port))
+}
+
+func (p *application) Routes() {
+	for _, r := range p.mrt.Router.All() {
+		fmt.Printf("%s\t%s\n", r.Method(), r.Pattern())
+	}
 }
 
 func (p *application) Migrate() {

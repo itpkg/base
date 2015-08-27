@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-martini/martini"
 	"github.com/jinzhu/gorm"
+	"github.com/jrallison/go-workers"
 	"github.com/pborman/uuid"
 )
 
@@ -15,9 +16,10 @@ type AuthEngine struct {
 	hmac *Hmac
 }
 
-func (p *AuthEngine) Job() {
-
+func (p *AuthEngine) Job() (string, func(message *workers.Msg), float32) {
+	return "", nil, 0.0
 }
+
 func (p *AuthEngine) Mount(mrt *martini.ClassicMartini) {
 	p.db = mrt.Injector.Get(reflect.TypeOf((*gorm.DB)(nil))).Interface().(*gorm.DB)
 	p.hmac = mrt.Injector.Get(reflect.TypeOf((*Hmac)(nil))).Interface().(*Hmac)

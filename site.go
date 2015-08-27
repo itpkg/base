@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-martini/martini"
 	"github.com/jinzhu/gorm"
+	"github.com/jrallison/go-workers"
 	"github.com/magiconair/properties"
 )
 
@@ -14,11 +15,18 @@ type SiteEngine struct {
 	db *gorm.DB
 }
 
-func (p *SiteEngine) Job() {
-
+func (p *SiteEngine) Job() (string, func(message *workers.Msg), float32) {
+	return "email", func(message *workers.Msg) {
+		//todo
+	}, 0.1
 }
+
 func (p *SiteEngine) Mount(mrt *martini.ClassicMartini) {
 	p.db = mrt.Injector.Get(reflect.TypeOf((*gorm.DB)(nil))).Interface().(*gorm.DB)
+	mrt.Get("/site/:key", func(params martini.Params) string {
+		//todo
+		return "Hello " + params["key"]
+	})
 }
 
 func (p *SiteEngine) Migrate() {

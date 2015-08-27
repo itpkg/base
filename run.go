@@ -65,25 +65,32 @@ func Run() error {
 		{
 			Name:    "worker",
 			Aliases: []string{"w"},
-			Usage:   "TODO: Run background job",
+			Usage:   "Run background job",
 			Flags: []cli.Flag{
 				cli.IntFlag{
 					Name:  "threads, t",
 					Usage: "threads poll size",
 					Value: 5,
 				},
+				cli.IntFlag{
+					Name:  "port, p",
+					Usage: "stats port",
+					Value: 11111,
+				},
 			},
-			Action: func(c *cli.Context) {
-				//todo
-			},
+			Action: callA(func(a Application, c *cli.Context) error {
+				a.Worker(c.Int("port"), c.Int("threads"))
+				return nil
+			}),
 		},
 		{
 			Name:    "routes",
 			Aliases: []string{"ro"},
-			Usage:   "TODO: Print out all defined routes in match order, with names",
-			Action: func(c *cli.Context) {
-				//todo
-			},
+			Usage:   "Print out all defined routes in match order, with names",
+			Action: callA(func(a Application, c *cli.Context) error {
+				a.Routes()
+				return nil
+			}),
 		},
 		{
 			Name:    "redis",
@@ -172,15 +179,6 @@ func Run() error {
 			Flags: []cli.Flag{},
 			Action: callA(func(a Application, c *cli.Context) error {
 				return a.Clear("token://")
-			}),
-		},
-		{
-			Name:  "assets:import",
-			Usage: "TODO: Import assets resources",
-			Flags: []cli.Flag{},
-			Action: callA(func(a Application, c *cli.Context) error {
-				//todo
-				return nil
 			}),
 		},
 		{
