@@ -1,8 +1,8 @@
 package base
 
 import (
-	"errors"
 	"log/syslog"
+	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -29,6 +29,14 @@ func (p *AuthEngine) Job() (string, func(message *workers.Msg), float32) {
 
 func (p *AuthEngine) Mount() {
 	MapTo("dao.auth", &AuthDao{})
+
+	p.Router.GET("/users/sign_in", func(c *gin.Context) {
+		locale := Locale(c)
+		fm := NewForm("sign_in", "user", Url("/users/sign_in", locale))
+		fm.AddEmailField("email", "")
+		fm.AddPasswordField("password", false)
+		c.JSON(http.StatusOK, fm)
+	})
 }
 
 func (p *AuthEngine) Migrate() {
@@ -44,16 +52,20 @@ func (p *AuthEngine) Migrate() {
 }
 
 func (p *AuthEngine) Seed() error {
-	tx := p.Db.Begin()
 
-	user, err := p.AuthDao.AddByEmail(tx, "root@localhost", "root", "changeme")
-	if err == nil {
+	tx := p.Db.Begin()
+	email := "root@localhost"
+	if p.AuthDao.GetByEmail(tx, email) == nil {
+		var user *User
+		user = p.AuthDao.CreateByEmail(tx, email, "root", "changeme")
+
 		p.AuthDao.Confirm(tx, user.ID)
 		p.AuthDao.AddRole(tx, user.ID, "root", "", 0, nil, nil)
 		p.AuthDao.AddRole(tx, user.ID, "admin", "", 0, nil, nil)
+
 	}
 	tx.Commit()
-	return err
+	return nil
 }
 
 func (p *AuthEngine) Info() (name string, version string, desc string) {
@@ -149,15 +161,17 @@ type AuthDao struct {
 	Helper *Helper `inject:"base.helper"`
 }
 
-func (p *AuthDao) AddByEmail(db *gorm.DB, email, name, password string) (*User, error) {
-	var c int
-	db.Model(User{}).Where("email = ? AND provider = ?", email, "email").Count(&c)
-	if c > 0 {
-		db.Rollback()
-		return nil, errors.New("email already exist")
+func (p *AuthDao) GetByEmail(db *gorm.DB, email string) *User {
+	var user User
+	if db.Model(User{}).Where("email = ? AND provider = ?", email, "email").First(&user).RecordNotFound() {
+		return nil
 	}
+	return &user
+}
+
+func (p *AuthDao) CreateByEmail(db *gorm.DB, email, name, password string) *User {
 	u := User{
-		Provider: "local",
+		Provider: "email",
 		Name:     name,
 		Email:    email,
 		Password: p.Helper.HmacSum([]byte(password)),
@@ -165,7 +179,7 @@ func (p *AuthDao) AddByEmail(db *gorm.DB, email, name, password string) (*User, 
 		Contact:  Contact{},
 	}
 	db.Create(&u)
-	return &u, nil
+	return &u
 }
 
 func (p *AuthDao) ResetUid(db *gorm.DB, user uint) {

@@ -12,7 +12,7 @@ func CurrentUser() gin.HandlerFunc {
 	}
 }
 
-func Locale() gin.HandlerFunc {
+func SetLocale() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		locale := c.DefaultQuery("locale", "en_US")
 		c.Set("locale", locale)
@@ -20,7 +20,7 @@ func Locale() gin.HandlerFunc {
 	}
 }
 
-func Transactions(db *gorm.DB) gin.HandlerFunc {
+func SetTransactions(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tx := db.Begin()
 		c.Set("db", tx)

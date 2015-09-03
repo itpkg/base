@@ -170,3 +170,11 @@ func LoopEngine(fn func(en Engine) error) error {
 	return nil
 
 }
+
+func Locale(c *gin.Context) string {
+	return c.MustGet("locale").(string)
+}
+
+func Url(path, locale string) string {
+	return fmt.Sprintf("%s?locale=%s", path, locale)
+}

@@ -36,14 +36,13 @@ func (p *SiteEngine) Job() (string, func(message *workers.Msg), float32) {
 
 func (p *SiteEngine) Mount() {
 	p.Router.GET("/site.info", func(c *gin.Context) {
-		locale := c.MustGet("locale").(string)
+		locale := Locale(c)
 		c.JSON(http.StatusOK, gin.H{
 			"title":       p.I18n.T(locale, "site.title"),
 			"keywords":    p.I18n.T(locale, "site.keywords"),
 			"description": p.I18n.T(locale, "site.description"),
 			"author":      p.I18n.T(locale, "site.author"),
 			"copyright":   p.I18n.T(locale, "site.copyright"),
-			"locale":      locale,
 		})
 	})
 }

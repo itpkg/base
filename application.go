@@ -49,8 +49,8 @@ func (p *Application) Worker(port, threads int) {
 
 func (p *Application) Server() {
 	ro := p.Router
-	ro.Use(Locale())
-	ro.Use(Transactions(p.Db))
+	ro.Use(SetLocale())
+	ro.Use(SetTransactions(p.Db))
 
 	LoopEngine(func(en Engine) error {
 		en.Mount()

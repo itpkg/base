@@ -16,7 +16,6 @@ func Run() error {
 
 			if e == nil {
 				e = f(Get("base.app").(*Application), c)
-				return
 			}
 			if e == nil {
 				log.Println("DONE!!!")
@@ -33,7 +32,6 @@ func Run() error {
 
 			if e == nil {
 				e = f(Get("base.helper").(*Helper), Get("base.cfg").(*Configuration), c)
-				return
 			}
 			if e == nil {
 				log.Println("DONE!!!")
@@ -65,8 +63,20 @@ func Run() error {
 			Name:    "server",
 			Aliases: []string{"s"},
 			Usage:   "Start web server",
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "only, o",
+					Usage: "singleton mode?",
+				},
+			},
 			Action: callA(func(a *Application, c *cli.Context) error {
-				a.Server()
+				if c.Bool("only") {
+					a.Dispatcher()
+					go a.Server()
+					a.Worker(11111, 2)
+				} else {
+					a.Server()
+				}
 				return nil
 			}),
 		},
