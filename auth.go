@@ -75,7 +75,7 @@ func (p *AuthEngine) Mount() {
 				tkm := make(map[string]interface{}, 0)
 				tkm["user"] = user.Uid
 				p.AuthDao.Log(db, user.ID, p.I18n.T(locale, "log.user.sign_in"), "info")
-				if tk, err := p.Helper.TokenCreate(user.Uid, tkm, p.Cfg.Http.Expire); err == nil {
+				if tk, err := p.Helper.TokenCreate(tkm, p.Cfg.Http.Expire); err == nil {
 					res.AddData("token", tk)
 				} else {
 					res.AddError(err.Error())
@@ -159,7 +159,7 @@ func (p *AuthEngine) Mount() {
 		if user == nil {
 			c.JSON(http.StatusUnauthorized, gin.H{})
 		} else {
-			p.Helper.TokenTtl(user.Uid, 0)
+			p.Helper.TokenTtl(c.Request, 0)
 			p.AuthDao.Log(db, user.ID, p.I18n.T(locale, "log.user.sign_out"), "info")
 			c.JSON(http.StatusOK, gin.H{})
 		}

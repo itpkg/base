@@ -78,20 +78,21 @@ func TestAes(t *testing.T) {
 	}
 }
 
-func TestJwt(t *testing.T) {
-
-	val1 := map[string]interface{}{"id": 100, "uid": "aaa"}
-	tkn, err := helper.TokenCreate("test", val1, 30)
-	if err == nil {
-		t.Logf("create: %s", tkn)
-	} else {
-		t.Errorf("%v", err)
-	}
-	val2, err1 := helper.TokenParse(tkn)
-	if err1 == nil && val2["aaa"] == val1["aaa"] {
-		t.Logf("parse: %v", val2)
-	} else {
-		t.Errorf("%v", err)
-	}
-
-}
+//
+//func TestJwt(t *testing.T) {
+//
+//	val1 := map[string]interface{}{"id": 100, "uid": "aaa"}
+//	tkn, err := helper.TokenCreate("test", val1, 30)
+//	if err == nil {
+//		t.Logf("create: %s", tkn)
+//	} else {
+//		t.Errorf("%v", err)
+//	}
+//	val2, err1 := helper.TokenParse(tkn)
+//	if err1 == nil && val2["aaa"] == val1["aaa"] {
+//		t.Logf("parse: %v", val2)
+//	} else {
+//		t.Errorf("%v", err)
+//	}
+//
+//}

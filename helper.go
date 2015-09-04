@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"log/syslog"
 	m_rand "math/rand"
+	"net/http"
 	"os"
 	"os/exec"
 	"syscall"
@@ -23,6 +24,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/garyburd/redigo/redis"
 	"github.com/jrallison/go-workers"
+	"github.com/pborman/uuid"
 )
 
 type Helper struct {
@@ -33,11 +35,12 @@ type Helper struct {
 	Logger *syslog.Writer `inject:""`
 }
 
-func (p *Helper) TokenParse(ticket string) (map[string]interface{}, error) {
-	if data, err := jwt.Parse(ticket, func(token *jwt.Token) (interface{}, error) {
+func (p *Helper) TokenParse(req *http.Request) (map[string]interface{}, error) {
+	if data, err := jwt.ParseFromRequest(req, func(token *jwt.Token) (interface{}, error) {
+		kid := token.Header["kid"].(string)
 		c := p.Redis.Get()
 		defer c.Close()
-		return redis.Bytes(c.Do("GET", p.TokenId(token.Header["kid"].(string))))
+		return redis.Bytes(c.Do("GET", p.tokenId(kid)))
 	}); err == nil {
 		if data.Valid {
 			return data.Claims["data"].(map[string]interface{}), nil
@@ -46,47 +49,44 @@ func (p *Helper) TokenParse(ticket string) (map[string]interface{}, error) {
 		}
 
 	} else {
-		fmt.Printf("### %v: [%s]\n", err, ticket)
 		return nil, err
 	}
 }
 
-func (p *Helper) TokenId(kid string) string {
+func (p *Helper) tokenId(kid string) string {
 	return fmt.Sprintf("token://%s", kid)
 }
 
-func (p *Helper) TokenTtl(kid string, minutes int) error {
-	c := p.Redis.Get()
-	defer c.Close()
-	var err error
-	if minutes > 0 {
-		_, err = c.Do("EXPIRE", p.TokenId(kid), 60*minutes)
-	} else {
-		_, err = c.Do("DEL", p.TokenId(kid))
-	}
+func (p *Helper) TokenTtl(req *http.Request, minutes int) error {
+	_, err := jwt.ParseFromRequest(req, func(token *jwt.Token) (interface{}, error) {
+		kid := token.Header["kid"].(string)
+		c := p.Redis.Get()
+		defer c.Close()
 
+		key, err := redis.Bytes(c.Do("GET", p.tokenId(kid)))
+		if minutes > 0 {
+			c.Do("EXPIRE", p.tokenId(kid), 60*minutes)
+		} else {
+			c.Do("DEL", p.tokenId(kid))
+		}
+		return key, err
+	})
 	return err
 }
 
-func (p *Helper) TokenCreate(kid string, data map[string]interface{}, minutes int) (string, error) {
+func (p *Helper) TokenCreate(data map[string]interface{}, minutes int) (string, error) {
+	key, err := p.RandomBytes(32)
+	if err != nil {
+		return "", err
+	}
+	kid := uuid.New()
 	c := p.Redis.Get()
 	defer c.Close()
 
-	key, err := redis.Bytes(c.Do("GET", p.TokenId(kid)))
-	if err != nil {
-		key, err = p.RandomBytes(32)
-		if err != nil {
-			return "", err
-		}
-		if minutes > 0 {
-			_, err = c.Do("SET", p.TokenId(kid), key, "EX", 60*minutes)
-		} else {
-			_, err = c.Do("SET", p.TokenId(kid), key)
-		}
-	}
-
-	if err != nil {
-		return "", err
+	if minutes > 0 {
+		_, err = c.Do("SET", p.tokenId(kid), key, "EX", 60*minutes)
+	} else {
+		_, err = c.Do("SET", p.tokenId(kid), key)
 	}
 
 	token := jwt.New(jwt.SigningMethodHS512)
