@@ -66,8 +66,20 @@ func (p *SiteEngine) Seed() error {
 	return p.I18n.Load("locales")
 }
 
-func (p *SiteEngine) Info() (name string, version string, desc string) {
+func (p *SiteEngine) Info() (name, version, desc string) {
 	return "site", "v20150826", "site module"
+}
+
+func (p *SiteEngine) Nav(admin bool) []*Link {
+	if !admin {
+		return nil
+	}
+	root, _, _ := p.Info()
+	links := make([]*Link, 0)
+	for _, v := range []string{"info", "seo", "captcha", "status"} {
+		links = append(links, &Link{Url: "/" + root + "/" + v, Label: "link.title.site." + v})
+	}
+	return links
 }
 
 //---------models

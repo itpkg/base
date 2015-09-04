@@ -8,6 +8,26 @@ type Widget interface {
 	T(i18n *I18n, locale string)
 }
 
+//----------navbar----------------------
+
+func NewNavBar() *NavBar {
+	return &NavBar{Links: make([]*DropDown, 0)}
+}
+
+type NavBar struct {
+	Links []*DropDown `json:"links"`
+}
+
+func (p *NavBar) Add(dd *DropDown) {
+	p.Links = append(p.Links, dd)
+}
+func (p *NavBar) T(i18n *I18n, locale string) {
+	for _, v := range p.Links {
+		//v.Label = i18n.T(locale, v.Label)
+		v.T(i18n, locale)
+	}
+}
+
 //------------response--------------------
 func NewResponse() *Response {
 	return &Response{Ok: true, Title: "label.success", Data: make(map[string]interface{}, 0), Errors: make([]string, 0)}
@@ -57,6 +77,10 @@ func (p *DropDown) T(i18n *I18n, locale string) {
 
 func (p *DropDown) Add(url, label string) {
 	p.Links = append(p.Links, &Link{Label: label, Url: url})
+}
+
+func (p *DropDown) AddLinks(links []*Link) {
+	p.Links = append(p.Links, links...)
 }
 
 type Link struct {

@@ -10,5 +10,6 @@ type Engine interface {
 	Mount()
 	Migrate()
 	Seed() error
-	Info() (name string, version string, desc string)
+	Info() (name, version, desc string)
+	Nav(admin bool) []*Link
 }

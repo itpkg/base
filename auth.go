@@ -29,10 +29,44 @@ func (p *AuthEngine) Job() (string, func(message *workers.Msg), float32) {
 	return "", nil, 0.0
 }
 
+func (p *AuthEngine) Nav(admin bool) []*Link {
+	root, _, _ := p.Info()
+	links := []*Link{
+		&Link{Url: "/" + root + "/profile", Label: "form.title.user.profile"},
+		&Link{Url: "/" + root + "/logs", Label: "link.title.personal.logs"},
+	}
+
+	return links
+}
+
 func (p *AuthEngine) Mount() {
 	MapTo("dao.auth", &AuthDao{})
+	root, _, _ := p.Info()
 
-	rt := p.Router.Group("/personal")
+	rt := p.Router.Group("/" + root)
+
+	rt.GET("/self", func(c *gin.Context) {
+		user := CurrentUser(c)
+		nb := NewNavBar()
+
+		if user != nil {
+			admin := user.Is("admin")
+			LoopEngine(func(en Engine) error {
+				if nav := en.Nav(admin); nav != nil {
+					path, _, _ := en.Info()
+					dd := NewDropDown("engine." + path + ".name")
+					dd.AddLinks(nav)
+
+					nb.Add(dd)
+				}
+				return nil
+
+			})
+		}
+
+		RESPONSE(c, p.I18n, nb)
+	})
+
 	rt.GET("/bar", func(c *gin.Context) {
 		links := NewDropDown("")
 		locale := Locale(c)
@@ -40,14 +74,14 @@ func (p *AuthEngine) Mount() {
 		if user == nil {
 			links.Label = "label.sign_in_or_up"
 			for _, v := range []string{"sign_in", "sign_up", "forgot_password", "confirm", "unlock"} {
-				links.Add("/personal/"+v, "form.title.user."+v)
+				links.Add("/"+root+"/"+v, "form.title.user."+v)
 			}
 
 		} else {
 			links.Label = "label.welcome"
-			for _, v := range []string{"profile", "sign_out"} {
-				links.Add("/personal/"+v, "form.title.user."+v)
-			}
+			links.Add("/"+root+"/self", "link.title.settings")
+			links.Add("/"+root+"/sign_out", "form.title.user.sign_out")
+
 		}
 		links.T(p.I18n, locale)
 		if user != nil {
@@ -57,7 +91,7 @@ func (p *AuthEngine) Mount() {
 	})
 
 	rt.GET("/sign_in", func(c *gin.Context) {
-		fm := NewForm("user.sign_in", "/personal/sign_in")
+		fm := NewForm("user.sign_in", "/"+root+"/sign_in")
 		fm.AddEmailField("email", "", true)
 		fm.AddPasswordField("password", true, false)
 		RESPONSE(c, p.I18n, fm)
@@ -91,7 +125,7 @@ func (p *AuthEngine) Mount() {
 	})
 
 	rt.GET("/sign_up", func(c *gin.Context) {
-		fm := NewForm("user.sign_up", "/personal/sign_up")
+		fm := NewForm("user.sign_up", "/"+root+"/sign_up")
 		fm.AddTextField("username", "", true)
 		fm.AddEmailField("email", "", true)
 		fm.AddPasswordField("password", true, true)
@@ -102,7 +136,7 @@ func (p *AuthEngine) Mount() {
 	})
 
 	rt.GET("/confirm", func(c *gin.Context) {
-		fm := NewForm("user.confirm", "/personal/sign_up")
+		fm := NewForm("user.confirm", "/"+root+"/sign_up")
 		fm.AddEmailField("email", "", true)
 		RESPONSE(c, p.I18n, fm)
 	})
@@ -111,7 +145,7 @@ func (p *AuthEngine) Mount() {
 	})
 
 	rt.GET("/unlock", func(c *gin.Context) {
-		fm := NewForm("user.unlock", "/personal/unlock")
+		fm := NewForm("user.unlock", "/"+root+"/unlock")
 		fm.AddEmailField("email", "", true)
 		RESPONSE(c, p.I18n, fm)
 	})
@@ -120,7 +154,7 @@ func (p *AuthEngine) Mount() {
 	})
 
 	rt.GET("/forgot_password", func(c *gin.Context) {
-		fm := NewForm("user.forgot_password", "/personal/forgot_password")
+		fm := NewForm("user.forgot_password", "/"+root+"/forgot_password")
 		fm.AddEmailField("email", "", true)
 		RESPONSE(c, p.I18n, fm)
 	})
@@ -129,7 +163,7 @@ func (p *AuthEngine) Mount() {
 	})
 
 	rt.GET("/change_password", func(c *gin.Context) {
-		fm := NewForm("user.forgot_password", "/personal/change_password")
+		fm := NewForm("user.forgot_password", "/"+root+"/change_password")
 		fm.AddHiddenField("token", c.Query("token"))
 		fm.AddPasswordField("password", true, true)
 		RESPONSE(c, p.I18n, fm)
@@ -143,7 +177,7 @@ func (p *AuthEngine) Mount() {
 		if user == nil {
 			c.JSON(http.StatusUnauthorized, gin.H{})
 		} else {
-			fm := NewForm("user.profile", "/personal/profile")
+			fm := NewForm("user.profile", "/"+root+"/profile")
 			fm.AddTextField("username", user.Name, true)
 			fm.AddPasswordField("current_password", true, false)
 			fm.AddPasswordField("password", true, true)
@@ -197,8 +231,8 @@ func (p *AuthEngine) Seed() error {
 	return nil
 }
 
-func (p *AuthEngine) Info() (name string, version string, desc string) {
-	return "auth", "v20150826", "auth module"
+func (p *AuthEngine) Info() (name, version, desc string) {
+	return "personal", "v20150826", "auth module"
 }
 
 //-----------------------form---------------------------------------

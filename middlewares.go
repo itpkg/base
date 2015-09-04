@@ -4,11 +4,20 @@ import (
 	"fmt"
 	"log/syslog"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 )
 
-func SetCurrentUser(helper *Helper, cfg *Configuration, log *syslog.Writer) gin.HandlerFunc {
+func SetCurrentUser(helper *Helper, cfg *Configuration, logger *syslog.Writer) gin.HandlerFunc {
+	loge := func(err error) {
+		switch err {
+		case jwt.ErrNoTokenInRequest:
+		case jwt.ErrInvalidKey:
+		default:
+			logger.Err(fmt.Sprintf("parse token - %v", err))
+		}
+	}
 	return func(c *gin.Context) {
 
 		if token, err := helper.TokenParse(c.Request); err == nil {
@@ -20,14 +29,14 @@ func SetCurrentUser(helper *Helper, cfg *Configuration, log *syslog.Writer) gin.
 				c.Set("user", &user)
 			}
 		} else {
-			log.Err(fmt.Sprintf("parse token: %v", err))
+			loge(err)
 			c.Set("user", nil)
 		}
 
 		c.Next()
 
 		if err := helper.TokenTtl(c.Request, cfg.Http.Expire); err != nil {
-			log.Err(fmt.Sprintf("parse token: %v", err))
+			loge(err)
 		}
 	}
 }
