@@ -45,7 +45,9 @@ func (p *AuthEngine) Mount() {
 
 		} else {
 			links.Label = "label.welcome"
-			links.Add("/personal/profile", "form.title.profile")
+			for _, v := range []string{"profile", "sign_out"} {
+				links.Add("/personal/"+v, "form.title.user."+v)
+			}
 		}
 		links.T(p.I18n, locale)
 		if user != nil {
@@ -152,7 +154,7 @@ func (p *AuthEngine) Mount() {
 		//todo
 	})
 
-	rt.DELETE("/sign_out", func(c *gin.Context) {
+	rt.GET("/sign_out", func(c *gin.Context) {
 		locale := Locale(c)
 		db := Db(c)
 		user := CurrentUser(c)
@@ -318,9 +320,7 @@ type AuthDao struct {
 
 func (p *AuthDao) Auth(db *gorm.DB, email, password string) *User {
 	if user := p.GetByEmail(db, email); user != nil && p.Helper.HmacEqual([]byte(password), user.Password) {
-
 		return user
-
 	}
 	return nil
 }
