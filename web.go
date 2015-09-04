@@ -30,14 +30,14 @@ func (p *NavBar) T(i18n *I18n, locale string) {
 
 //------------response--------------------
 func NewResponse() *Response {
-	return &Response{Ok: true, Title: "label.success", Data: make(map[string]interface{}, 0), Errors: make([]string, 0)}
+	return &Response{Ok: true, Title: "label.success", Data: make([]interface{}, 0), Errors: make([]string, 0)}
 }
 
 type Response struct {
-	Ok     bool                   `json:"ok"`
-	Title  string                 `json:"title"`
-	Data   map[string]interface{} `json:"data"`
-	Errors []string               `json:"errors"`
+	Ok     bool          `json:"ok"`
+	Title  string        `json:"title"`
+	Data   []interface{} `json:"data"`
+	Errors []string      `json:"errors"`
 }
 
 func (p *Response) AddError(err string) {
@@ -45,8 +45,8 @@ func (p *Response) AddError(err string) {
 	p.Title = "label.failed"
 	p.Errors = append(p.Errors, err)
 }
-func (p *Response) AddData(key string, val interface{}) {
-	p.Data[key] = val
+func (p *Response) AddData(val interface{}) {
+	p.Data = append(p.Data, val)
 }
 
 func (p *Response) T(i18n *I18n, locale string) {
@@ -314,7 +314,7 @@ func (p *Form) AddEmailField(id string, value interface{}, required bool) {
 
 func (p *Form) AddPasswordField(id string, required, confirmed bool) {
 
-	p.AddField(&PasswordField{
+	p1 := &PasswordField{
 		Field: Field{
 			Id:   id,
 			Type: "password",
@@ -323,9 +323,15 @@ func (p *Form) AddPasswordField(id string, required, confirmed bool) {
 		Required:    required,
 		Size:        6,
 		Placeholder: "form.placeholder.password",
-	})
+	}
+	if id != "password" {
+		p1.Placeholder = p.placeholder(id)
+		p1.Label = p.label(id)
+	}
+	p.AddField(p1)
+
 	if confirmed {
-		p.AddField(&PasswordField{
+		p2 := &PasswordField{
 			Field: Field{
 				Id:   "re_" + id,
 				Type: "password",
@@ -334,7 +340,12 @@ func (p *Form) AddPasswordField(id string, required, confirmed bool) {
 			Required:    required,
 			Size:        6,
 			Placeholder: "form.placeholder.re_password",
-		})
+		}
+		if id != "password" {
+			p2.Placeholder = p.placeholder(p2.Id)
+			p2.Label = p.label(p2.Id)
+		}
+		p.AddField(p2)
 	}
 }
 

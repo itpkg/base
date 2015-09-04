@@ -112,7 +112,7 @@ func (p *AuthEngine) Mount() {
 				tkm["user"] = user.Uid
 				p.AuthDao.Log(db, user.ID, p.I18n.T(locale, "log.user.sign_in"), "info")
 				if tk, err := p.Helper.TokenCreate(tkm, p.Cfg.Http.Expire); err == nil {
-					res.AddData("token", tk)
+					res.AddData(tk)
 				} else {
 					res.AddError(err.Error())
 				}
@@ -180,12 +180,37 @@ func (p *AuthEngine) Mount() {
 			fm := NewForm("user.profile", "/"+root+"/profile")
 			fm.AddTextField("username", user.Name, true)
 			fm.AddPasswordField("current_password", true, false)
-			fm.AddPasswordField("password", true, true)
+			fm.AddPasswordField("new_password", true, true)
 			RESPONSE(c, p.I18n, fm)
 		}
 	})
 	rt.POST("/profile", func(c *gin.Context) {
-		//todo
+		locale := Locale(c)
+		db := Db(c)
+		var fm ProfileFm
+		res := NewResponse()
+		if err := c.Bind(&fm); err == nil &&
+			fm.Password == fm.ConfirmPassword &&
+			(fm.Password == "" || len(fm.Password) >= 6) {
+
+			user := CurrentUser(c)
+			if user != nil && p.Helper.HmacEqual([]byte(fm.CurrentPassword), user.Password) {
+
+				db.Model(user).Updates(User{Name: fm.Username})
+				if fm.Password != "" {
+					db.Model(user).Updates(User{Password: p.Helper.HmacSum([]byte(fm.Password))})
+				}
+
+				p.AuthDao.Log(db, user.ID, p.I18n.T(locale, "log.user.update_profile"), "info")
+
+			} else {
+				res.AddError("error.user.bad_password")
+			}
+
+		} else {
+			res.AddError("error.inputs_invalid")
+		}
+		RESPONSE(c, p.I18n, res)
 	})
 
 	rt.GET("/sign_out", func(c *gin.Context) {
@@ -254,9 +279,9 @@ type SignUpFm struct {
 }
 type ProfileFm struct {
 	Username        string `form:"username" binding:"required"`
-	CurrentPassword string `form:"current_password"`
-	Password        string `form:"password"`
-	ConfirmPassword string `form:"confirm_password"`
+	CurrentPassword string `form:"current_password" json:"current_password" binding:"required"`
+	Password        string `form:"new_password" json:"new_password" binding:""`
+	ConfirmPassword string `form:"re_new_password" json:"re_new_password" binding:""`
 }
 type EmailFm struct {
 	Email string `form:"email" binding:"required"`
