@@ -37,7 +37,9 @@ func (p *I18n) T(lang, key string, args ...interface{}) string {
 	if val, err := p.Get(lang, key); err == nil {
 		return fmt.Sprintf(val, args...)
 	} else {
-		return fmt.Sprintf("Translation [%s] not found", key)
+		msg := fmt.Sprintf("Translation [%s] not found", key)
+		p.Logger.Err(msg)
+		return msg
 	}
 }
 

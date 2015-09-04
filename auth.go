@@ -52,7 +52,7 @@ func (p *AuthEngine) Mount() {
 	})
 
 	rt.GET("/sign_in", func(c *gin.Context) {
-		fm := NewForm("sign_in", "/personal/sign_in")
+		fm := NewForm("user_sign_in", "/personal/sign_in")
 		fm.AddEmailField("email", "")
 		fm.AddPasswordField("password", false)
 		FORM(c, p.I18n, fm)
@@ -76,6 +76,65 @@ func (p *AuthEngine) Mount() {
 
 		}
 	})
+
+	rt.GET("/sign_up", func(c *gin.Context) {
+		fm := NewForm("user_sign_up", "/personal/sign_up")
+		fm.AddTextField("username", "")
+		fm.AddEmailField("email", "")
+		fm.AddPasswordField("password", true)
+		FORM(c, p.I18n, fm)
+	})
+	rt.POST("/sign_up", func(c *gin.Context) {
+	})
+
+	rt.GET("/confirm", func(c *gin.Context) {
+		fm := NewForm("user_confirm", "/personal/sign_up")
+		fm.AddEmailField("email", "")
+		FORM(c, p.I18n, fm)
+	})
+	rt.POST("/confirm", func(c *gin.Context) {
+	})
+
+	rt.GET("/unlock", func(c *gin.Context) {
+		fm := NewForm("user_unlock", "/personal/unlock")
+		fm.AddEmailField("email", "")
+		FORM(c, p.I18n, fm)
+	})
+	rt.POST("/unlock", func(c *gin.Context) {
+	})
+
+	rt.GET("/forgot_password", func(c *gin.Context) {
+		fm := NewForm("user_forgot_password", "/personal/forgot_password")
+		fm.AddEmailField("email", "")
+		FORM(c, p.I18n, fm)
+	})
+	rt.POST("/forgot_password", func(c *gin.Context) {
+	})
+
+	rt.GET("/change_password", func(c *gin.Context) {
+		fm := NewForm("user_forgot_password", "/personal/change_password")
+		fm.AddHiddenField("token", c.Query("token"))
+		fm.AddPasswordField("password", true)
+		FORM(c, p.I18n, fm)
+	})
+	rt.POST("/change_password", func(c *gin.Context) {
+	})
+
+	rt.GET("/profile", func(c *gin.Context) {
+		user := CurrentUser(c)
+		if user == nil {
+			c.JSON(http.StatusUnauthorized, gin.H{})
+		} else {
+			fm := NewForm("user_profile", "/personal/profile")
+			fm.AddTextField("username", user.Name)
+			fm.AddPasswordField("current_password", false)
+			fm.AddPasswordField("password", true)
+			FORM(c, p.I18n, fm)
+		}
+	})
+	rt.POST("/profile", func(c *gin.Context) {
+	})
+
 	rt.DELETE("/sign_out", func(c *gin.Context) {
 		locale := Locale(c)
 		db := Db(c)
@@ -127,6 +186,27 @@ func (p *AuthEngine) Info() (name string, version string, desc string) {
 type SignInFm struct {
 	Email    string `form:"email" binding:"required"`
 	Password string `form:"password" binding:"required"`
+}
+type ChangePasswordFm struct {
+	Token string `form:"token"`
+	Password string `form:"password"`
+	ConfirmPassword string `form:"confirm_password"`
+}
+type SignUpFm struct {
+	Username    string `form:"username" binding:"required"`
+	Email    string `form:"email" binding:"required"`
+	CurrentPassword string `form:"current_password"`
+	Password string `form:"password"`
+	ConfirmPassword string `form:"confirm_password"`
+}
+type ProfileFm struct {
+	Username    string `form:"username" binding:"required"`
+	CurrentPassword string `form:"current_password"`
+	Password string `form:"password"`
+	ConfirmPassword string `form:"confirm_password"`
+}
+type EmailFm struct {
+	Email    string `form:"email" binding:"required"`
 }
 
 //-----------------------model---------------------------------------
