@@ -26,6 +26,15 @@ func SetCurrentUser(helper *Helper, cfg *Configuration, logger *syslog.Writer) g
 			if db.Model(User{}).Where("uid = ?", token["user"]).First(&user).RecordNotFound() {
 				c.Set("user", nil)
 			} else {
+				db.Model(&user).Related(&user.Permissions)
+				for i, _ := range user.Permissions {
+					db.Model(&user.Permissions[i]).Related(&user.Permissions[i].Role)
+				}
+
+				//				for _, pm := range user.Permissions{
+				//					logger.Debug(fmt.Sprintf("PERMISSION %d=>%s %v %v", pm.RoleID,pm.Role.Name, pm.StartUp, pm.ShutDown))
+				//				}
+
 				c.Set("user", &user)
 			}
 		} else {

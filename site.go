@@ -76,7 +76,7 @@ func (p *SiteEngine) Nav(admin bool) []*Link {
 	}
 	root, _, _ := p.Info()
 	links := make([]*Link, 0)
-	for _, v := range []string{"info", "seo", "captcha", "status"} {
+	for _, v := range []string{"info", "seo", "captcha", "locales", "status"} {
 		links = append(links, &Link{Url: "/" + root + "/" + v, Label: "link.title.site." + v})
 	}
 	return links

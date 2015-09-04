@@ -319,7 +319,6 @@ func (p *User) Has(name, resource_type string, resource_id uint) bool {
 		ro := pm.Role
 		if pm.StartUp.Before(now) &&
 			pm.ShutDown.After(now) &&
-			ro != nil &&
 			ro.Name == name &&
 			ro.ResourceType == resource_type &&
 			ro.ResourceID == resource_id {
@@ -365,7 +364,7 @@ type Permission struct {
 	Model
 	User   User
 	UserID uint `sql:"index;not null"`
-	Role   *Role
+	Role   Role
 	RoleID uint `sql:"index;not null"`
 	DateZone
 }
