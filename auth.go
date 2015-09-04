@@ -13,10 +13,12 @@ import (
 
 type AuthEngine struct {
 	Helper  *Helper        `inject:"base.helper"`
+	Cfg     *Configuration `inject:"base.cfg"`
 	Db      *gorm.DB       `inject:""`
 	Logger  *syslog.Writer `inject:""`
 	Router  *gin.Engine    `inject:""`
 	AuthDao *AuthDao       `inject:""`
+	I18n    *I18n          `inject:""`
 }
 
 func (p *AuthEngine) Cron() {
@@ -30,12 +32,61 @@ func (p *AuthEngine) Job() (string, func(message *workers.Msg), float32) {
 func (p *AuthEngine) Mount() {
 	MapTo("dao.auth", &AuthDao{})
 
-	p.Router.GET("/users/sign_in", func(c *gin.Context) {
+	rt := p.Router.Group("/personal")
+	rt.GET("/bar", func(c *gin.Context) {
+		links := NewDropDown("")
 		locale := Locale(c)
-		fm := NewForm("sign_in", "user", Url("/users/sign_in", locale))
+		user := CurrentUser(c)
+		if user == nil {
+			links.Label = "label.sign_in_or_up"
+			links.Add("/personal/sign_up", "form.title.sign_up")
+		} else {
+			links.Label = "label.welcome"
+			links.Add("/personal/profile", "form.title.profile")
+		}
+		links.T(p.I18n, locale)
+		if user != nil {
+			links.Label += user.Name
+		}
+		c.JSON(http.StatusOK, links)
+	})
+
+	rt.GET("/sign_in", func(c *gin.Context) {
+		fm := NewForm("sign_in", "/personal/sign_in")
 		fm.AddEmailField("email", "")
 		fm.AddPasswordField("password", false)
-		c.JSON(http.StatusOK, fm)
+		FORM(c, p.I18n, fm)
+	})
+
+	rt.POST("/sign_in", func(c *gin.Context) {
+		locale := Locale(c)
+		db := Db(c)
+		var fm SignInFm
+		if c.Bind(&fm) == nil {
+			user := p.AuthDao.Auth(db, fm.Email, fm.Password)
+			if user == nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": p.I18n.T(locale, "error.user.email_password_not_match")})
+			} else {
+				tkm := make(map[string]interface{}, 0)
+				tkm["user"] = user.Uid
+				p.AuthDao.Log(db, user.ID, p.I18n.T(locale, "log.user.sign_in"), "info")
+				tk, _ := p.Helper.TokenCreate(user.Uid, tkm, p.Cfg.Http.Expire)
+				c.JSON(http.StatusOK, gin.H{"token": tk})
+			}
+
+		}
+	})
+	rt.DELETE("/sign_out", func(c *gin.Context) {
+		locale := Locale(c)
+		db := Db(c)
+		user := CurrentUser(c)
+		if user == nil {
+			c.JSON(http.StatusUnauthorized, gin.H{})
+		} else {
+			p.Helper.TokenTtl(user.Uid, 0)
+			p.AuthDao.Log(db, user.ID, p.I18n.T(locale, "log.user.sign_out"), "info")
+			c.JSON(http.StatusOK, gin.H{})
+		}
 	})
 }
 
@@ -70,6 +121,12 @@ func (p *AuthEngine) Seed() error {
 
 func (p *AuthEngine) Info() (name string, version string, desc string) {
 	return "auth", "v20150826", "auth module"
+}
+
+//-----------------------form---------------------------------------
+type SignInFm struct {
+	Email    string `form:"email" binding:"required"`
+	Password string `form:"password" binding:"required"`
 }
 
 //-----------------------model---------------------------------------
@@ -159,6 +216,13 @@ type Permission struct {
 
 type AuthDao struct {
 	Helper *Helper `inject:"base.helper"`
+}
+
+func (p *AuthDao) Auth(db *gorm.DB, email, password string) *User {
+	if user := p.GetByEmail(db, email); user != nil && p.Helper.HmacEqual(user.Password, []byte(password)) {
+		return user
+	}
+	return nil
 }
 
 func (p *AuthDao) GetByEmail(db *gorm.DB, email string) *User {

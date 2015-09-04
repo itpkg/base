@@ -1,13 +1,34 @@
 package base
 
 import (
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 )
 
-func CurrentUser() gin.HandlerFunc {
+func SetCurrentUser(helper *Helper, cfg *Configuration) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Set("user", nil)
+
+		bearer := c.Request.Header.Get("Authorization")
+		pre := "Bearer "
+		if strings.HasPrefix(bearer, pre) {
+			if token, err := helper.TokenParse(bearer[len(pre) : len(bearer)-1]); err != nil {
+				db := Db(c)
+				var user User
+				if db.Model(User{}).Where("uid = ?", token["user"]).First(&user).RecordNotFound() {
+					c.Set("user", nil)
+				} else {
+					helper.TokenTtl(user.Uid, cfg.Http.Expire)
+					c.Set("user", &user)
+				}
+			} else {
+				c.Set("user", nil)
+			}
+		} else {
+			c.Set("user", nil)
+
+		}
 		c.Next()
 	}
 }

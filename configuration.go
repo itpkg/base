@@ -9,8 +9,9 @@ type Configuration struct {
 	Env     string
 	Secrets string
 	Http    struct {
-		Host string
-		Port int
+		Host   string
+		Port   int
+		Expire int
 	}
 	Database struct {
 		Host     string

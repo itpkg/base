@@ -8,7 +8,7 @@ import (
 )
 
 func TestForm(t *testing.T) {
-	fm := base.NewForm("fmId", "demo", "/form.action")
+	fm := base.NewForm("fmId", "/form.action")
 	fm.AddButton("view", "btnAction", "PUT", true, "success")
 	fm.AddHiddenField("hid", "hidVal")
 	fm.AddTextField("tid", "txtVal")

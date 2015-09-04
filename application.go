@@ -18,7 +18,7 @@ type Application struct {
 	Logger *syslog.Writer `inject:""`
 	Cfg    *Configuration `inject:"base.cfg"`
 	Router *gin.Engine    `inject:""`
-	Helper *Helper        `inject:""`
+	Helper *Helper        `inject:"base.helper"`
 }
 
 func (p *Application) Dispatcher() {
@@ -51,6 +51,7 @@ func (p *Application) Server() {
 	ro := p.Router
 	ro.Use(SetLocale())
 	ro.Use(SetTransactions(p.Db))
+	ro.Use(SetCurrentUser(p.Helper, p.Cfg))
 
 	LoopEngine(func(en Engine) error {
 		en.Mount()

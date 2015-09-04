@@ -81,7 +81,7 @@ func TestAes(t *testing.T) {
 func TestJwt(t *testing.T) {
 
 	val1 := map[string]interface{}{"id": 100, "uid": "aaa"}
-	tkn, err := helper.TokenCreate(val1, 30)
+	tkn, err := helper.TokenCreate("test", val1, 30)
 	if err == nil {
 		t.Logf("create: %s", tkn)
 	} else {

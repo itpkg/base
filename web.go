@@ -4,6 +4,36 @@ import (
 	"fmt"
 )
 
+func NewDropDown(label string) *DropDown {
+	return &DropDown{Label: label, Links: make([]*Link, 0)}
+}
+
+type DropDown struct {
+	Label string  `json:"label"`
+	Links []*Link `json:"links"`
+}
+
+func (p *DropDown) T(i18n *I18n, locale string) {
+	p.Label = i18n.T(locale, p.Label)
+	for _, v := range p.Links {
+		v.Label = i18n.T(locale, v.Label)
+	}
+
+}
+
+func (p *DropDown) Add(url, label string) {
+	p.Links = append(p.Links, &Link{Label: label, Url: url})
+}
+
+type Link struct {
+	Url   string `json:"url"`
+	Label string `json:"label"`
+}
+
+func (p *Link) T(i18n *I18n, locale string) {
+	p.Label = i18n.T(locale, p.Label)
+}
+
 //---------------------------List----------------------------------------------
 
 func NewList(id, action string, body func() []interface{}, pager *Pager) *List {
@@ -17,7 +47,6 @@ func NewList(id, action string, body func() []interface{}, pager *Pager) *List {
 }
 
 type List struct {
-	Locale string        `json:"locale"`
 	Id     string        `json:"id"`
 	Action string        `json:"action"`
 	Title  string        `json:"title"`
@@ -92,7 +121,6 @@ func NewTable(id, action string, header []*Th, body func() [][]interface{}, new,
 }
 
 type Table struct {
-	Locale string          `json:"locale"`
 	Id     string          `json:"id"`
 	Action string          `json:"action"`
 	Title  string          `json:"title"`
@@ -114,24 +142,22 @@ type Th struct {
 }
 
 //---------------------------Form----------------------------------------------
-func NewForm(id, resource, action string) *Form {
+func NewForm(id, action string) *Form {
 	return &Form{
 		Id:        id,
-		Resource:  resource,
 		Title:     fmt.Sprintf("form.title.%s", id),
 		Action:    action,
 		Method:    "POST",
 		Multipart: false,
 		Fields:    make([]interface{}, 0),
 		Buttons:   make([]interface{}, 0),
+		Errors:    make([]string, 0),
 		Submit:    "form.button.submit",
 		Reset:     "form.button.reset",
 	}
 }
 
 type Form struct {
-	Resource  string        `json:"-"`
-	Locale    string        `json:"locale"`
 	Id        string        `json:"id"`
 	Title     string        `json:"title"`
 	Method    string        `json:"method"`
@@ -141,6 +167,37 @@ type Form struct {
 	Buttons   []interface{} `json:"buttons"`
 	Submit    string        `json:"submit"`
 	Reset     string        `json:"reset"`
+	Errors    []string      `json:"errors"`
+}
+
+func (p *Form) T(i18n *I18n, locale string) {
+	p.Title = i18n.T(locale, p.Title)
+	p.Submit = i18n.T(locale, p.Submit)
+	p.Reset = i18n.T(locale, p.Reset)
+	for _, v := range p.Fields {
+		switch v.(type) {
+		case *TextField:
+			v1 := v.(*TextField)
+			v1.Label = i18n.T(locale, v1.Label)
+		case *PasswordField:
+			//p.Fields[k].Label = i18n.T(locale, p.Fields[k].Label)
+			v1 := v.(*PasswordField)
+			v1.Label = i18n.T(locale, v1.Label)
+		}
+
+	}
+	for _, v := range p.Buttons {
+		switch v.(type) {
+		case *Button:
+			v1 := v.(*Button)
+			v1.Label = i18n.T(locale, v1.Label)
+		}
+
+	}
+}
+
+func (p *Form) AddError(err string) {
+	p.Errors = append(p.Errors, err)
 }
 
 func (p *Form) AddButton(id, action, method string, confirm bool, style string) {
@@ -176,12 +233,12 @@ func (p *Form) AddTextField(id string, value interface{}) {
 }
 
 func (p *Form) AddEmailField(id string, value interface{}) {
-	p.Fields = append(p.Fields, TextField{
+	p.Fields = append(p.Fields, &TextField{
 		Field: Field{
 			Id:   id,
 			Type: "email",
 		},
-		Label: "form.email",
+		Label: "form.field.email",
 		Value: value,
 	})
 }
@@ -189,7 +246,7 @@ func (p *Form) AddEmailField(id string, value interface{}) {
 func (p *Form) AddPasswordField(id string, confirm bool) {
 	var cl interface{}
 	if confirm {
-		cl = "form.password_confirm"
+		cl = "form.field.password_confirm"
 	} else {
 		cl = nil
 	}
@@ -198,7 +255,7 @@ func (p *Form) AddPasswordField(id string, confirm bool) {
 			Id:   id,
 			Type: "password",
 		},
-		Label:   "form.password",
+		Label:   "form.field.password",
 		Confirm: cl,
 	})
 }
@@ -277,7 +334,7 @@ func (p *Form) AddField(f interface{}) {
 }
 
 func (p *Form) label(id string) string {
-	return fmt.Sprintf("form.%s.%s", p.Resource, id)
+	return fmt.Sprintf("form.%s.%s", p.Id, id)
 }
 
 type Field struct {

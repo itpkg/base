@@ -1,10 +1,12 @@
 package base
 
 import (
+	"fmt"
 	"log/syslog"
 	"net/http"
 
 	"github.com/carlescere/scheduler"
+	"github.com/garyburd/redigo/redis"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	"github.com/jrallison/go-workers"
@@ -13,6 +15,7 @@ import (
 type SiteEngine struct {
 	Db         *gorm.DB       `inject:""`
 	Logger     *syslog.Writer `inject:""`
+	Redis      *redis.Pool    `inject:""`
 	Router     *gin.Engine    `inject:""`
 	I18n       *I18n          `inject:""`
 	SettingDao *SettingDao    `inject:""`
@@ -35,15 +38,22 @@ func (p *SiteEngine) Job() (string, func(message *workers.Msg), float32) {
 }
 
 func (p *SiteEngine) Mount() {
-	p.Router.GET("/site.info", func(c *gin.Context) {
+	p.Router.GET("/info", func(c *gin.Context) {
 		locale := Locale(c)
-		c.JSON(http.StatusOK, gin.H{
-			"title":       p.I18n.T(locale, "site.title"),
-			"keywords":    p.I18n.T(locale, "site.keywords"),
-			"description": p.I18n.T(locale, "site.description"),
-			"author":      p.I18n.T(locale, "site.author"),
-			"copyright":   p.I18n.T(locale, "site.copyright"),
-		})
+		db := Db(c)
+
+		vals := make(map[string]interface{}, 0)
+		for _, v := range c.Request.URL.Query()["keys"] {
+			switch {
+			case v == "title" || v == "keywords" || v == "description" || v == "author" || v == "copyright":
+				vals[v] = p.I18n.T(locale, fmt.Sprintf("site.%s", v))
+			case v == "links":
+				links := make([]Link, 0)
+				p.SettingDao.Get(db, "site.links", links, false)
+				vals[v] = links
+			}
+		}
+		c.JSON(http.StatusOK, vals)
 	})
 }
 

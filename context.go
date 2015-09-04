@@ -6,6 +6,7 @@ import (
 	"crypto/cipher"
 	"fmt"
 	"log/syslog"
+	"net/http"
 	"os"
 	"strconv"
 	"text/template"
@@ -175,6 +176,32 @@ func Locale(c *gin.Context) string {
 	return c.MustGet("locale").(string)
 }
 
-func Url(path, locale string) string {
-	return fmt.Sprintf("%s?locale=%s", path, locale)
+func Db(c *gin.Context) *gorm.DB {
+	return c.MustGet("db").(*gorm.DB)
+}
+
+func CurrentUser(c *gin.Context) *User {
+	if user := c.MustGet("user"); user == nil {
+		return nil
+	} else {
+		return user.(*User)
+	}
+}
+
+func Url(path, locale string, params map[string]interface{}) string {
+
+	url := fmt.Sprintf("%s?locale=%s", path, locale)
+	if params != nil {
+		for k, v := range params {
+			url += fmt.Sprintf("&%s=%v", k, v)
+		}
+	}
+	return url
+}
+
+func FORM(ctx *gin.Context, i18n *I18n, fm *Form) {
+	locale := Locale(ctx)
+	fm.Action = Url(fm.Action, locale, nil)
+	fm.T(i18n, locale)
+	ctx.JSON(http.StatusOK, fm)
 }
