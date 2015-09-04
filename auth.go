@@ -39,7 +39,10 @@ func (p *AuthEngine) Mount() {
 		user := CurrentUser(c)
 		if user == nil {
 			links.Label = "label.sign_in_or_up"
-			links.Add("/personal/sign_up", "form.title.sign_up")
+			for _, v := range []string{"sign_in", "sign_up", "forgot_password", "confirm", "unlock"} {
+				links.Add("/personal/"+v, "form.title.user."+v)
+			}
+
 		} else {
 			links.Label = "label.welcome"
 			links.Add("/personal/profile", "form.title.profile")
@@ -52,72 +55,85 @@ func (p *AuthEngine) Mount() {
 	})
 
 	rt.GET("/sign_in", func(c *gin.Context) {
-		fm := NewForm("user_sign_in", "/personal/sign_in")
-		fm.AddEmailField("email", "")
-		fm.AddPasswordField("password", false)
-		FORM(c, p.I18n, fm)
+		fm := NewForm("user.sign_in", "/personal/sign_in")
+		fm.AddEmailField("email", "", true)
+		fm.AddPasswordField("password", true, false)
+		RESPONSE(c, p.I18n, fm)
 	})
 
 	rt.POST("/sign_in", func(c *gin.Context) {
 		locale := Locale(c)
 		db := Db(c)
 		var fm SignInFm
-		if c.Bind(&fm) == nil {
+		res := NewResponse()
+
+		if err := c.Bind(&fm); err == nil {
 			user := p.AuthDao.Auth(db, fm.Email, fm.Password)
 			if user == nil {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": p.I18n.T(locale, "error.user.email_password_not_match")})
+				res.AddError("error.user.email_password_not_match")
 			} else {
 				tkm := make(map[string]interface{}, 0)
 				tkm["user"] = user.Uid
 				p.AuthDao.Log(db, user.ID, p.I18n.T(locale, "log.user.sign_in"), "info")
-				tk, _ := p.Helper.TokenCreate(user.Uid, tkm, p.Cfg.Http.Expire)
-				c.JSON(http.StatusOK, gin.H{"token": tk})
+				if tk, err := p.Helper.TokenCreate(user.Uid, tkm, p.Cfg.Http.Expire); err == nil {
+					res.AddData("token", tk)
+				} else {
+					res.AddError(err.Error())
+				}
 			}
 
+		} else {
+			res.AddError("error.inputs_invalid")
 		}
+		RESPONSE(c, p.I18n, res)
 	})
 
 	rt.GET("/sign_up", func(c *gin.Context) {
-		fm := NewForm("user_sign_up", "/personal/sign_up")
-		fm.AddTextField("username", "")
-		fm.AddEmailField("email", "")
-		fm.AddPasswordField("password", true)
-		FORM(c, p.I18n, fm)
+		fm := NewForm("user.sign_up", "/personal/sign_up")
+		fm.AddTextField("username", "", true)
+		fm.AddEmailField("email", "", true)
+		fm.AddPasswordField("password", true, true)
+		RESPONSE(c, p.I18n, fm)
 	})
 	rt.POST("/sign_up", func(c *gin.Context) {
+		//todo
 	})
 
 	rt.GET("/confirm", func(c *gin.Context) {
-		fm := NewForm("user_confirm", "/personal/sign_up")
-		fm.AddEmailField("email", "")
-		FORM(c, p.I18n, fm)
+		fm := NewForm("user.confirm", "/personal/sign_up")
+		fm.AddEmailField("email", "", true)
+		RESPONSE(c, p.I18n, fm)
 	})
 	rt.POST("/confirm", func(c *gin.Context) {
+		//todo
 	})
 
 	rt.GET("/unlock", func(c *gin.Context) {
-		fm := NewForm("user_unlock", "/personal/unlock")
-		fm.AddEmailField("email", "")
-		FORM(c, p.I18n, fm)
+		fm := NewForm("user.unlock", "/personal/unlock")
+		fm.AddEmailField("email", "", true)
+		RESPONSE(c, p.I18n, fm)
 	})
 	rt.POST("/unlock", func(c *gin.Context) {
+		//todo
 	})
 
 	rt.GET("/forgot_password", func(c *gin.Context) {
-		fm := NewForm("user_forgot_password", "/personal/forgot_password")
-		fm.AddEmailField("email", "")
-		FORM(c, p.I18n, fm)
+		fm := NewForm("user.forgot_password", "/personal/forgot_password")
+		fm.AddEmailField("email", "", true)
+		RESPONSE(c, p.I18n, fm)
 	})
 	rt.POST("/forgot_password", func(c *gin.Context) {
+		//todo
 	})
 
 	rt.GET("/change_password", func(c *gin.Context) {
-		fm := NewForm("user_forgot_password", "/personal/change_password")
+		fm := NewForm("user.forgot_password", "/personal/change_password")
 		fm.AddHiddenField("token", c.Query("token"))
-		fm.AddPasswordField("password", true)
-		FORM(c, p.I18n, fm)
+		fm.AddPasswordField("password", true, true)
+		RESPONSE(c, p.I18n, fm)
 	})
 	rt.POST("/change_password", func(c *gin.Context) {
+		//todo
 	})
 
 	rt.GET("/profile", func(c *gin.Context) {
@@ -125,14 +141,15 @@ func (p *AuthEngine) Mount() {
 		if user == nil {
 			c.JSON(http.StatusUnauthorized, gin.H{})
 		} else {
-			fm := NewForm("user_profile", "/personal/profile")
-			fm.AddTextField("username", user.Name)
-			fm.AddPasswordField("current_password", false)
-			fm.AddPasswordField("password", true)
-			FORM(c, p.I18n, fm)
+			fm := NewForm("user.profile", "/personal/profile")
+			fm.AddTextField("username", user.Name, true)
+			fm.AddPasswordField("current_password", true, false)
+			fm.AddPasswordField("password", true, true)
+			RESPONSE(c, p.I18n, fm)
 		}
 	})
 	rt.POST("/profile", func(c *gin.Context) {
+		//todo
 	})
 
 	rt.DELETE("/sign_out", func(c *gin.Context) {
@@ -188,25 +205,25 @@ type SignInFm struct {
 	Password string `form:"password" binding:"required"`
 }
 type ChangePasswordFm struct {
-	Token string `form:"token"`
-	Password string `form:"password"`
-	ConfirmPassword string `form:"confirm_password"`
+	Token      string `form:"token"`
+	Password   string `form:"password"`
+	RePassword string `form:"re_password"`
 }
 type SignUpFm struct {
-	Username    string `form:"username" binding:"required"`
-	Email    string `form:"email" binding:"required"`
+	Username        string `form:"username" binding:"required"`
+	Email           string `form:"email" binding:"required"`
 	CurrentPassword string `form:"current_password"`
-	Password string `form:"password"`
-	ConfirmPassword string `form:"confirm_password"`
+	Password        string `form:"password"`
+	RePassword      string `form:"re_password"`
 }
 type ProfileFm struct {
-	Username    string `form:"username" binding:"required"`
+	Username        string `form:"username" binding:"required"`
 	CurrentPassword string `form:"current_password"`
-	Password string `form:"password"`
+	Password        string `form:"password"`
 	ConfirmPassword string `form:"confirm_password"`
 }
 type EmailFm struct {
-	Email    string `form:"email" binding:"required"`
+	Email string `form:"email" binding:"required"`
 }
 
 //-----------------------model---------------------------------------
@@ -295,12 +312,15 @@ type Permission struct {
 //-----------------------dao---------------------------------------
 
 type AuthDao struct {
-	Helper *Helper `inject:"base.helper"`
+	Helper *Helper        `inject:"base.helper"`
+	Logger *syslog.Writer `inject:""`
 }
 
 func (p *AuthDao) Auth(db *gorm.DB, email, password string) *User {
-	if user := p.GetByEmail(db, email); user != nil && p.Helper.HmacEqual(user.Password, []byte(password)) {
+	if user := p.GetByEmail(db, email); user != nil && p.Helper.HmacEqual([]byte(password), user.Password) {
+
 		return user
+
 	}
 	return nil
 }

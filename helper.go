@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/syslog"
 	m_rand "math/rand"
 	"os"
 	"os/exec"
@@ -27,23 +28,25 @@ import (
 type Helper struct {
 	HKey []byte `inject:"hmac.key"`
 	//16、24或者32位的[]byte，分别对应AES-128, AES-192或AES-256算法
-	Cip   cipher.Block `inject:"aes.cip"`
-	Redis *redis.Pool  `inject:""`
+	Cip    cipher.Block   `inject:"aes.cip"`
+	Redis  *redis.Pool    `inject:""`
+	Logger *syslog.Writer `inject:""`
 }
 
 func (p *Helper) TokenParse(ticket string) (map[string]interface{}, error) {
-	if ticket, err := jwt.Parse(ticket, func(token *jwt.Token) (interface{}, error) {
+	if data, err := jwt.Parse(ticket, func(token *jwt.Token) (interface{}, error) {
 		c := p.Redis.Get()
 		defer c.Close()
 		return redis.Bytes(c.Do("GET", p.TokenId(token.Header["kid"].(string))))
 	}); err == nil {
-		if ticket.Valid {
-			return ticket.Claims["data"].(map[string]interface{}), nil
+		if data.Valid {
+			return data.Claims["data"].(map[string]interface{}), nil
 		} else {
 			return nil, errors.New("error.bad_token")
 		}
 
 	} else {
+		fmt.Printf("### %v: [%s]\n", err, ticket)
 		return nil, err
 	}
 }
@@ -66,17 +69,20 @@ func (p *Helper) TokenTtl(kid string, minutes int) error {
 }
 
 func (p *Helper) TokenCreate(kid string, data map[string]interface{}, minutes int) (string, error) {
-	key, err := p.RandomBytes(32)
-	if err != nil {
-		return "", err
-	}
 	c := p.Redis.Get()
 	defer c.Close()
 
-	if minutes > 0 {
-		_, err = c.Do("SET", p.TokenId(kid), key, "EX", 60*minutes)
-	} else {
-		_, err = c.Do("SET", p.TokenId(kid), key)
+	key, err := redis.Bytes(c.Do("GET", p.TokenId(kid)))
+	if err != nil {
+		key, err = p.RandomBytes(32)
+		if err != nil {
+			return "", err
+		}
+		if minutes > 0 {
+			_, err = c.Do("SET", p.TokenId(kid), key, "EX", 60*minutes)
+		} else {
+			_, err = c.Do("SET", p.TokenId(kid), key)
+		}
 	}
 
 	if err != nil {
@@ -136,7 +142,7 @@ func (p *Helper) HmacSum(src []byte) []byte {
 }
 
 func (p *Helper) HmacEqual(src, dst []byte) bool {
-	return hmac.Equal(src, dst)
+	return hmac.Equal(p.HmacSum(src), dst)
 }
 
 func (p *Helper) AesEncrypt(src []byte) ([]byte, []byte, error) {

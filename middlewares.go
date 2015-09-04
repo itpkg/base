@@ -1,19 +1,23 @@
 package base
 
 import (
+	"fmt"
+	"log/syslog"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 )
 
-func SetCurrentUser(helper *Helper, cfg *Configuration) gin.HandlerFunc {
+func SetCurrentUser(helper *Helper, cfg *Configuration, log *syslog.Writer) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		bearer := c.Request.Header.Get("Authorization")
 		pre := "Bearer "
+
 		if strings.HasPrefix(bearer, pre) {
-			if token, err := helper.TokenParse(bearer[len(pre) : len(bearer)-1]); err != nil {
+			ticket := bearer[len(pre):len(bearer)]
+			if token, err := helper.TokenParse(ticket); err == nil {
 				db := Db(c)
 				var user User
 				if db.Model(User{}).Where("uid = ?", token["user"]).First(&user).RecordNotFound() {
@@ -23,6 +27,7 @@ func SetCurrentUser(helper *Helper, cfg *Configuration) gin.HandlerFunc {
 					c.Set("user", &user)
 				}
 			} else {
+				log.Err(fmt.Sprintf("parse token: %v [%s]", err, ticket))
 				c.Set("user", nil)
 			}
 		} else {

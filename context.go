@@ -199,9 +199,8 @@ func Url(path, locale string, params map[string]interface{}) string {
 	return url
 }
 
-func FORM(ctx *gin.Context, i18n *I18n, fm *Form) {
+func RESPONSE(ctx *gin.Context, i18n *I18n, w Widget) {
 	locale := Locale(ctx)
-	fm.Action = Url(fm.Action, locale, nil)
-	fm.T(i18n, locale)
-	ctx.JSON(http.StatusOK, fm)
+	w.T(i18n, locale)
+	ctx.JSON(http.StatusOK, w)
 }

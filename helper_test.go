@@ -47,7 +47,7 @@ func TestHmac(t *testing.T) {
 
 	t.Logf("HMAC1(%d): %x", len(dest1), dest1)
 	t.Logf("HMAC2(%d): %x", len(dest2), dest2)
-	if !helper.HmacEqual(dest1, dest2) {
+	if !helper.HmacEqual([]byte(hello), dest1) {
 		t.Errorf("HMAC FAILED!")
 	}
 }

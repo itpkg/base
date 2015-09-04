@@ -51,7 +51,7 @@ func (p *Application) Server() {
 	ro := p.Router
 	ro.Use(SetLocale())
 	ro.Use(SetTransactions(p.Db))
-	ro.Use(SetCurrentUser(p.Helper, p.Cfg))
+	ro.Use(SetCurrentUser(p.Helper, p.Cfg, p.Logger))
 
 	LoopEngine(func(en Engine) error {
 		en.Mount()

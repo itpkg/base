@@ -4,6 +4,40 @@ import (
 	"fmt"
 )
 
+type Widget interface {
+	T(i18n *I18n, locale string)
+}
+
+//------------response--------------------
+func NewResponse() *Response {
+	return &Response{Ok: true, Title: "label.success", Data: make(map[string]interface{}, 0), Errors: make([]string, 0)}
+}
+
+type Response struct {
+	Ok     bool                   `json:"ok"`
+	Title  string                 `json:"title"`
+	Data   map[string]interface{} `json:"data"`
+	Errors []string               `json:"errors"`
+}
+
+func (p *Response) AddError(err string) {
+	p.Ok = false
+	p.Title = "label.failed"
+	p.Errors = append(p.Errors, err)
+}
+func (p *Response) AddData(key string, val interface{}) {
+	p.Data[key] = val
+}
+
+func (p *Response) T(i18n *I18n, locale string) {
+	p.Title = i18n.T(locale, p.Title)
+	for k, v := range p.Errors {
+		p.Errors[k] = i18n.T(locale, v)
+	}
+
+}
+
+//------------dropdown--------------------
 func NewDropDown(label string) *DropDown {
 	return &DropDown{Label: label, Links: make([]*Link, 0)}
 }
@@ -144,6 +178,7 @@ type Th struct {
 //---------------------------Form----------------------------------------------
 func NewForm(id, action string) *Form {
 	return &Form{
+		Ok:        true,
 		Id:        id,
 		Title:     fmt.Sprintf("form.title.%s", id),
 		Action:    action,
@@ -158,6 +193,7 @@ func NewForm(id, action string) *Form {
 }
 
 type Form struct {
+	Ok        bool          `json:"ok"`
 	Id        string        `json:"id"`
 	Title     string        `json:"title"`
 	Method    string        `json:"method"`
@@ -174,15 +210,17 @@ func (p *Form) T(i18n *I18n, locale string) {
 	p.Title = i18n.T(locale, p.Title)
 	p.Submit = i18n.T(locale, p.Submit)
 	p.Reset = i18n.T(locale, p.Reset)
+	p.Action = Url(p.Action, locale, nil)
 	for _, v := range p.Fields {
 		switch v.(type) {
 		case *TextField:
 			v1 := v.(*TextField)
 			v1.Label = i18n.T(locale, v1.Label)
+			v1.Placeholder = i18n.T(locale, v1.Placeholder)
 		case *PasswordField:
-			//p.Fields[k].Label = i18n.T(locale, p.Fields[k].Label)
 			v1 := v.(*PasswordField)
 			v1.Label = i18n.T(locale, v1.Label)
+			v1.Placeholder = i18n.T(locale, v1.Placeholder)
 		}
 
 	}
@@ -197,6 +235,7 @@ func (p *Form) T(i18n *I18n, locale string) {
 }
 
 func (p *Form) AddError(err string) {
+	p.Ok = false
 	p.Errors = append(p.Errors, err)
 }
 
@@ -221,78 +260,96 @@ func (p *Form) AddHiddenField(id string, value interface{}) {
 	})
 }
 
-func (p *Form) AddTextField(id string, value interface{}) {
-	p.Fields = append(p.Fields, TextField{
+func (p *Form) AddTextField(id string, value interface{}, required bool) {
+	p.Fields = append(p.Fields, &TextField{
 		Field: Field{
 			Id:   id,
 			Type: "text",
 		},
-		Label: p.label(id),
-		Value: value,
+		Label:       p.label(id),
+		Value:       value,
+		Size:        8,
+		Required:    required,
+		Placeholder: p.placeholder(id),
 	})
 }
 
-func (p *Form) AddEmailField(id string, value interface{}) {
+func (p *Form) AddEmailField(id string, value interface{}, required bool) {
 	p.Fields = append(p.Fields, &TextField{
 		Field: Field{
 			Id:   id,
 			Type: "email",
 		},
-		Label: "form.field.email",
-		Value: value,
+		Label:       "form.field.email",
+		Value:       value,
+		Size:        7,
+		Required:    required,
+		Placeholder: "form.placeholder.email",
 	})
 }
 
-func (p *Form) AddPasswordField(id string, confirm bool) {
-	var cl interface{}
-	if confirm {
-		cl = "form.field.password_confirm"
-	} else {
-		cl = nil
-	}
+func (p *Form) AddPasswordField(id string, required, confirmed bool) {
+
 	p.AddField(&PasswordField{
 		Field: Field{
 			Id:   id,
 			Type: "password",
 		},
-		Label:   "form.field.password",
-		Confirm: cl,
+		Label:       "form.field.password",
+		Required:    required,
+		Size:        6,
+		Placeholder: "form.placeholder.password",
 	})
+	if confirmed {
+		p.AddField(&PasswordField{
+			Field: Field{
+				Id:   "re_" + id,
+				Type: "password",
+			},
+			Label:       "form.field.re_password",
+			Required:    required,
+			Size:        6,
+			Placeholder: "form.placeholder.re_password",
+		})
+	}
 }
 
-func (p *Form) AddTextareaField(id string, value interface{}) {
+func (p *Form) AddTextareaField(id string, value interface{}, required bool) {
 	p.Fields = append(p.Fields, TextareaField{
 		Field: Field{
 			Id:   id,
 			Type: "text",
 		},
-		Label: p.label(id),
-		Value: value,
-		Rows:  10,
+		Label:    p.label(id),
+		Value:    value,
+		Rows:     10,
+		Required: required,
 	})
 }
 
-func (p *Form) AddMarkdownField(id string, value interface{}) {
+func (p *Form) AddMarkdownField(id string, value interface{}, required bool) {
 	p.Fields = append(p.Fields, TextareaField{
 		Field: Field{
 			Id:   id,
 			Type: "markdown",
 		},
-		Label: p.label(id),
-		Value: value,
-		Rows:  10,
+		Label:    p.label(id),
+		Value:    value,
+		Rows:     10,
+		Required: required,
 	})
 }
 
-func (p *Form) AddHtmlField(id string, value interface{}) {
+func (p *Form) AddHtmlField(id string, value interface{}, required bool) {
 	p.Fields = append(p.Fields, TextareaField{
 		Field: Field{
 			Id:   id,
 			Type: "html",
 		},
-		Label: p.label(id),
-		Value: value,
-		Rows:  10,
+		Label:    p.label(id),
+		Value:    value,
+		Rows:     10,
+		Required: required,
 	})
 }
 
@@ -334,7 +391,11 @@ func (p *Form) AddField(f interface{}) {
 }
 
 func (p *Form) label(id string) string {
-	return fmt.Sprintf("form.%s.%s", p.Id, id)
+	return fmt.Sprintf("form.field.%s.%s", p.Id, id)
+}
+
+func (p *Form) placeholder(id string) string {
+	return fmt.Sprintf("form.placeholder.%s.%s", p.Id, id)
 }
 
 type Field struct {
@@ -347,19 +408,25 @@ type HiddenField struct {
 }
 type TextField struct {
 	Field
-	Label string      `json:"label"`
-	Value interface{} `json:"value"`
+	Label       string      `json:"label"`
+	Value       interface{} `json:"value"`
+	Size        int         `json:"size"`
+	Required    bool        `json:"required"`
+	Placeholder string      `json:"placeholder"`
 }
 type TextareaField struct {
 	Field
-	Label string      `json:"label"`
-	Value interface{} `json:"value"`
-	Rows  int         `json:"rows"`
+	Label    string      `json:"label"`
+	Value    interface{} `json:"value"`
+	Rows     int         `json:"rows"`
+	Required bool        `json:"required"`
 }
 type PasswordField struct {
 	Field
-	Label   string      `json:"label"`
-	Confirm interface{} `json:"confirm"`
+	Label       string `json:"label"`
+	Required    bool   `json:"required"`
+	Size        int    `json:"size"`
+	Placeholder string `json:"placeholder"`
 }
 type Option struct {
 	Id      interface{} `json:"id"`
