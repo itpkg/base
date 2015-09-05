@@ -3,11 +3,23 @@ package base
 import (
 	"fmt"
 	"log/syslog"
+	"net/http"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 )
+
+func AuthRequired(name string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if user := CurrentUser(c); user != nil && user.Is(name) {
+			c.Next()
+		} else {
+			c.AbortWithStatus(http.StatusUnauthorized)
+		}
+
+	}
+}
 
 func SetCurrentUser(helper *Helper, cfg *Configuration, logger *syslog.Writer) gin.HandlerFunc {
 	loge := func(err error) {

@@ -34,6 +34,9 @@ func (p *I18n) Load(path string) error {
 }
 
 func (p *I18n) T(lang, key string, args ...interface{}) string {
+	if key == "" {
+		return key
+	}
 	if val, err := p.Get(lang, key); err == nil {
 		return fmt.Sprintf(val, args...)
 	} else {

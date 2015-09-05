@@ -114,18 +114,6 @@ type List struct {
 
 //---------------------------Table---------------------------------------------
 func NewTable(id, action string, header []*Th, body func() [][]interface{}, new, view, edit, remove bool, pager *Pager) *Table {
-	var newB *Button
-	if new {
-		newB = &Button{
-			Id:     "new",
-			Label:  "form.button.new",
-			Style:  "primary",
-			Action: fmt.Sprintf("%s/new", action),
-			Method: "GET",
-		}
-	} else {
-		newB = nil
-	}
 
 	var bodyV [][]interface{}
 	if view || edit || remove {
@@ -133,33 +121,7 @@ func NewTable(id, action string, header []*Th, body func() [][]interface{}, new,
 
 		for _, row := range body() {
 			bg := make([]*Button, 0)
-			if view {
-				bg = append(bg, &Button{
-					Id:     "new",
-					Label:  "form.button.view",
-					Style:  "success",
-					Action: fmt.Sprintf("%s/%v", action, row[0]),
-					Method: "GET",
-				})
-			}
-			if edit {
-				bg = append(bg, &Button{
-					Id:     "new",
-					Label:  "form.button.edit",
-					Style:  "warning",
-					Action: fmt.Sprintf("%s/%v/edit", action, row[0]),
-					Method: "GET",
-				})
-			}
-			if remove {
-				bg = append(bg, &Button{
-					Id:     "new",
-					Label:  "form.button.remove",
-					Style:  "danger",
-					Action: fmt.Sprintf("%s/%v", action, row[0]),
-					Method: "DELETE",
-				})
-			}
+
 			row = append(row, bg)
 			bodyV = append(bodyV, row)
 		}
@@ -167,25 +129,54 @@ func NewTable(id, action string, header []*Th, body func() [][]interface{}, new,
 		bodyV = body()
 	}
 
-	return &Table{
-		Id:     id,
-		Title:  fmt.Sprintf("table.title.%s", id),
-		Action: action,
-		Header: header,
-		Body:   bodyV,
-		New:    newB,
-		Pager:  pager,
+	tab := Table{
+		Id:      id,
+		Title:   fmt.Sprintf("table.title.%s", id),
+		Action:  action,
+		Header:  header,
+		Body:    bodyV,
+		Refresh: "form.button.refresh",
+		Pager:   pager,
 	}
+	if new {
+		tab.New = "form.button.new"
+	}
+	if view {
+		tab.View = "form.button.view"
+	}
+	if edit {
+		tab.Edit = "form.button.edit"
+	}
+	if remove {
+		tab.Remove = "form.button.remove"
+	}
+
+	return &tab
+}
+
+func (p *Table) T(i18n *I18n, locale string) {
+	for _, th := range p.Header {
+		th.Label = i18n.T(locale, th.Label)
+	}
+	p.View = i18n.T(locale, p.View)
+	p.Remove = i18n.T(locale, p.Remove)
+	p.Refresh = i18n.T(locale, p.Refresh)
+	p.Edit = i18n.T(locale, p.Edit)
+	p.New = i18n.T(locale, p.New)
 }
 
 type Table struct {
-	Id     string          `json:"id"`
-	Action string          `json:"action"`
-	Title  string          `json:"title"`
-	Header []*Th           `json:"header"`
-	Body   [][]interface{} `json:"body"`
-	New    *Button         `json:"new"`
-	Pager  *Pager          `json:"pager"`
+	Id      string          `json:"id"`
+	Action  string          `json:"action"`
+	Title   string          `json:"title"`
+	Header  []*Th           `json:"header"`
+	Body    [][]interface{} `json:"body"`
+	New     string          `json:"new"`
+	Edit    string          `json:"edit"`
+	Remove  string          `json:"remove"`
+	Refresh string          `json:"refresh"`
+	View    string          `json:"view"`
+	Pager   *Pager          `json:"pager"`
 }
 
 type Pager struct {
