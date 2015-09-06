@@ -124,7 +124,7 @@ func (p *Application) Nginx() {
 
 		`
 upstream {{.domain}}.conf {
-server http://{{.host}}:{{.port}} fail_timeout=0;
+server {{.host}}:{{.port}} fail_timeout=0;
 }
 
 
@@ -143,7 +143,7 @@ keepalive_timeout 10;
 
 server_name {{.domain}} www.{{.domain}};
 
-root {{.pwd}}/public;
+root {{.pwd}}/assets;
 try_files $uri $uri/index.html @{{.domain}}.conf;
 
 location @{{.domain}}.conf {
@@ -154,8 +154,8 @@ proxy_set_header  X-Real-IP $remote_addr;
 proxy_redirect off;
 proxy_pass http://{{.domain}}.conf;
 # limit_req zone=one;
-access_log log/{{.domain}}.access.log;
-error_log log/{{.domain}}.error.log;
+access_log logs/{{.domain}}.access.log;
+error_log logs/{{.domain}}.error.log;
 }
 
 location ~* \.(?:css|js|html|jpg|jpeg|gif|png|ico)$ {
