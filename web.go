@@ -232,6 +232,9 @@ func (p *Form) T(i18n *I18n, locale string) {
 			v1 := v.(*PasswordField)
 			v1.Label = i18n.T(locale, v1.Label)
 			v1.Placeholder = i18n.T(locale, v1.Placeholder)
+		case *SelectField:
+			v1 := v.(*SelectField)
+			v1.Label = i18n.T(locale, v1.Label)
 		}
 
 	}
@@ -271,21 +274,31 @@ func (p *Form) AddHiddenField(id string, value interface{}) {
 	})
 }
 
-func (p *Form) AddTextField(id string, value interface{}, required bool) {
+func (p *Form) AddTextField(id string, value interface{}, required bool, readonly bool) {
+	size := 8
+	lbl := p.label(id)
+	phl := p.placeholder(id)
+	if id == "username" {
+		size = 4
+		lbl = "form.field.username"
+		phl = "form.placeholder.username"
+	}
+
 	p.Fields = append(p.Fields, &TextField{
 		Field: Field{
 			Id:   id,
 			Type: "text",
 		},
-		Label:       p.label(id),
+		Label:       lbl,
 		Value:       value,
-		Size:        8,
+		Size:        size,
 		Required:    required,
-		Placeholder: p.placeholder(id),
+		Readonly:    readonly,
+		Placeholder: phl,
 	})
 }
 
-func (p *Form) AddEmailField(id string, value interface{}, required bool) {
+func (p *Form) AddEmailField(id string, value interface{}, required bool, readonly bool) {
 	p.Fields = append(p.Fields, &TextField{
 		Field: Field{
 			Id:   id,
@@ -295,6 +308,7 @@ func (p *Form) AddEmailField(id string, value interface{}, required bool) {
 		Value:       value,
 		Size:        7,
 		Required:    required,
+		Readonly:    readonly,
 		Placeholder: "form.placeholder.email",
 	})
 }
@@ -375,14 +389,17 @@ func (p *Form) AddHtmlField(id string, value interface{}, required bool) {
 	})
 }
 
-func (p *Form) AddSelectField(id string, ofn func() []*Option) {
+func (p *Form) AddSelectField(id string, value interface{}, ofn func() []*Option, required bool) {
 	p.AddField(&SelectField{
 		Field: Field{
 			Id:   id,
 			Type: "select",
 		},
-		Label:   p.label(id),
-		Options: ofn(),
+		Label:    p.label(id),
+		Options:  ofn(),
+		Value:    value,
+		Size:     5,
+		Required: required,
 	})
 }
 
@@ -434,6 +451,7 @@ type TextField struct {
 	Value       interface{} `json:"value"`
 	Size        int         `json:"size"`
 	Required    bool        `json:"required"`
+	Readonly    bool        `json:"readonly"`
 	Placeholder string      `json:"placeholder"`
 }
 type TextareaField struct {
@@ -457,9 +475,12 @@ type Option struct {
 }
 type SelectField struct {
 	Field
-	Label    string    `json:"label"`
-	Options  []*Option `json:"options"`
-	Multiple bool      `json:"multi"`
+	Label    string      `json:"label"`
+	Options  []*Option   `json:"options"`
+	Multiple bool        `json:"multi"`
+	Size     int         `json:"size"`
+	Value    interface{} `json:"value"`
+	Required bool        `json:"required"`
 }
 type GroupField struct {
 	Field

@@ -11,8 +11,8 @@ func TestForm(t *testing.T) {
 	fm := base.NewForm("fmId", "/form.action")
 	fm.AddButton("view", "btnAction", "PUT", true, "success")
 	fm.AddHiddenField("hid", "hidVal")
-	fm.AddTextField("tid", "txtVal", true)
-	fm.AddEmailField("eid", "aaa@aaa.com", true)
+	fm.AddTextField("tid", "txtVal", true, false)
+	fm.AddEmailField("eid", "aaa@aaa.com", true, false)
 	fm.AddPasswordField("pid", true, true)
 	fm.AddPasswordField("pid", false, true)
 	fm.AddTextareaField("taid", "text area", true)
@@ -31,7 +31,7 @@ func TestForm(t *testing.T) {
 		},
 	}
 
-	fm.AddSelectField("sid", func() []*base.Option { return items })
+	fm.AddSelectField("sid", 0, func() []*base.Option { return items }, true)
 	fm.AddRadioGroupField("rid", func() []*base.Option { return items })
 	fm.AddCheckboxGroupField("cid", func() []*base.Option { return items })
 

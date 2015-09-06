@@ -92,7 +92,7 @@ func (p *AuthEngine) Mount() {
 
 	rt.GET("/sign_in", func(c *gin.Context) {
 		fm := NewForm("user.sign_in", "/"+root+"/sign_in")
-		fm.AddEmailField("email", "", true)
+		fm.AddEmailField("email", "", true, false)
 		fm.AddPasswordField("password", true, false)
 		RESPONSE(c, p.I18n, fm)
 	})
@@ -126,8 +126,8 @@ func (p *AuthEngine) Mount() {
 
 	rt.GET("/sign_up", func(c *gin.Context) {
 		fm := NewForm("user.sign_up", "/"+root+"/sign_up")
-		fm.AddTextField("username", "", true)
-		fm.AddEmailField("email", "", true)
+		fm.AddTextField("username", "", true, false)
+		fm.AddEmailField("email", "", true, false)
 		fm.AddPasswordField("password", true, true)
 		RESPONSE(c, p.I18n, fm)
 	})
@@ -137,7 +137,7 @@ func (p *AuthEngine) Mount() {
 
 	rt.GET("/confirm", func(c *gin.Context) {
 		fm := NewForm("user.confirm", "/"+root+"/sign_up")
-		fm.AddEmailField("email", "", true)
+		fm.AddEmailField("email", "", true, false)
 		RESPONSE(c, p.I18n, fm)
 	})
 	rt.POST("/confirm", func(c *gin.Context) {
@@ -146,7 +146,7 @@ func (p *AuthEngine) Mount() {
 
 	rt.GET("/unlock", func(c *gin.Context) {
 		fm := NewForm("user.unlock", "/"+root+"/unlock")
-		fm.AddEmailField("email", "", true)
+		fm.AddEmailField("email", "", true, false)
 		RESPONSE(c, p.I18n, fm)
 	})
 	rt.POST("/unlock", func(c *gin.Context) {
@@ -155,7 +155,7 @@ func (p *AuthEngine) Mount() {
 
 	rt.GET("/forgot_password", func(c *gin.Context) {
 		fm := NewForm("user.forgot_password", "/"+root+"/forgot_password")
-		fm.AddEmailField("email", "", true)
+		fm.AddEmailField("email", "", true, false)
 		RESPONSE(c, p.I18n, fm)
 	})
 	rt.POST("/forgot_password", func(c *gin.Context) {
@@ -178,7 +178,7 @@ func (p *AuthEngine) Mount() {
 			c.JSON(http.StatusUnauthorized, gin.H{})
 		} else {
 			fm := NewForm("user.profile", "/"+root+"/profile")
-			fm.AddTextField("username", user.Name, true)
+			fm.AddTextField("username", user.Name, true, false)
 			fm.AddPasswordField("current_password", true, false)
 			fm.AddPasswordField("new_password", true, true)
 			RESPONSE(c, p.I18n, fm)
