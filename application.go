@@ -2,7 +2,6 @@ package base
 
 import (
 	"fmt"
-	"log/syslog"
 	"os"
 	"text/template"
 
@@ -10,15 +9,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	"github.com/jrallison/go-workers"
+	"github.com/op/go-logging"
 )
 
 type Application struct {
-	Db     *gorm.DB       `inject:""`
-	Redis  *redis.Pool    `inject:""`
-	Logger *syslog.Writer `inject:""`
-	Cfg    *Configuration `inject:"base.cfg"`
-	Router *gin.Engine    `inject:""`
-	Helper *Helper        `inject:"base.helper"`
+	Db     *gorm.DB        `inject:""`
+	Redis  *redis.Pool     `inject:""`
+	Logger *logging.Logger `inject:""`
+	Cfg    *Configuration  `inject:"base.cfg"`
+	Router *gin.Engine     `inject:""`
+	Helper *Helper         `inject:"base.helper"`
 }
 
 func (p *Application) Dispatcher() {

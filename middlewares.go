@@ -2,12 +2,12 @@ package base
 
 import (
 	"fmt"
-	"log/syslog"
 	"net/http"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
+	"github.com/op/go-logging"
 )
 
 func AuthRequired(name string) gin.HandlerFunc {
@@ -21,13 +21,13 @@ func AuthRequired(name string) gin.HandlerFunc {
 	}
 }
 
-func SetCurrentUser(helper *Helper, cfg *Configuration, logger *syslog.Writer) gin.HandlerFunc {
+func SetCurrentUser(helper *Helper, cfg *Configuration, logger *logging.Logger) gin.HandlerFunc {
 	loge := func(err error) {
 		switch err {
 		case jwt.ErrNoTokenInRequest:
 		case jwt.ErrInvalidKey:
 		default:
-			logger.Err(fmt.Sprintf("parse token - %v", err))
+			logger.Error(fmt.Sprintf("parse token - %v", err))
 		}
 	}
 	return func(c *gin.Context) {

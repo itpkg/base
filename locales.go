@@ -3,15 +3,15 @@ package base
 import (
 	"fmt"
 	"io/ioutil"
-	"log/syslog"
 
 	"github.com/garyburd/redigo/redis"
 	"github.com/magiconair/properties"
+	"github.com/op/go-logging"
 )
 
 type I18n struct {
-	Redis  *redis.Pool    `inject:""`
-	Logger *syslog.Writer `inject:""`
+	Redis  *redis.Pool     `inject:""`
+	Logger *logging.Logger `inject:""`
 }
 
 func (p *I18n) Load(path string) error {
@@ -41,7 +41,7 @@ func (p *I18n) T(lang, key string, args ...interface{}) string {
 		return fmt.Sprintf(val, args...)
 	} else {
 		msg := fmt.Sprintf("Translation [%s] not found", key)
-		p.Logger.Err(msg)
+		p.Logger.Error(msg)
 		return msg
 	}
 }

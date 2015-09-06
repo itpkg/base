@@ -5,7 +5,6 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"fmt"
-	"log/syslog"
 	"net/http"
 	"os"
 	"strconv"
@@ -17,6 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	"github.com/jrallison/go-workers"
+	"github.com/op/go-logging"
 	"github.com/pborman/uuid"
 	"gopkg.in/yaml.v2"
 )
@@ -25,10 +25,11 @@ type Context struct {
 }
 
 func (p *Context) Load(env, file string, ping bool) error {
-	logger, err := syslog.New(syslog.LOG_LOCAL7, "itpkg")
-	if err != nil {
-		return err
+	slog, err := logging.NewSyslogBackend("itpkg")
+	if err == nil {
+		logging.SetBackend(slog)
 	}
+	logger := logging.MustGetLogger("itpkg")
 	Map(logger)
 
 	_, err = os.Stat(file)
@@ -81,7 +82,7 @@ func (p *Context) Load(env, file string, ping bool) error {
 
 }
 
-func (p *Context) ping(cfg *Configuration, logger *syslog.Writer) error {
+func (p *Context) ping(cfg *Configuration, logger *logging.Logger) error {
 
 	//database
 	db, err := gorm.Open("postgres", cfg.DbUrl())

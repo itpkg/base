@@ -1,24 +1,24 @@
 package base
 
 import (
-	"log/syslog"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	"github.com/jrallison/go-workers"
+	"github.com/op/go-logging"
 	"github.com/pborman/uuid"
 )
 
 type AuthEngine struct {
-	Helper  *Helper        `inject:"base.helper"`
-	Cfg     *Configuration `inject:"base.cfg"`
-	Db      *gorm.DB       `inject:""`
-	Logger  *syslog.Writer `inject:""`
-	Router  *gin.Engine    `inject:""`
-	AuthDao *AuthDao       `inject:""`
-	I18n    *I18n          `inject:""`
+	Helper  *Helper         `inject:"base.helper"`
+	Cfg     *Configuration  `inject:"base.cfg"`
+	Db      *gorm.DB        `inject:""`
+	Logger  *logging.Logger `inject:""`
+	Router  *gin.Engine     `inject:""`
+	AuthDao *AuthDao        `inject:""`
+	I18n    *I18n           `inject:""`
 }
 
 func (p *AuthEngine) Cron() {
@@ -372,8 +372,8 @@ type Permission struct {
 //-----------------------dao---------------------------------------
 
 type AuthDao struct {
-	Helper *Helper        `inject:"base.helper"`
-	Logger *syslog.Writer `inject:""`
+	Helper *Helper         `inject:"base.helper"`
+	Logger *logging.Logger `inject:""`
 }
 
 func (p *AuthDao) Auth(db *gorm.DB, email, password string) *User {

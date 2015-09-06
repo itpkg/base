@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/syslog"
 	m_rand "math/rand"
 	"net/http"
 	"os"
@@ -24,15 +23,16 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/garyburd/redigo/redis"
 	"github.com/jrallison/go-workers"
+	"github.com/op/go-logging"
 	"github.com/pborman/uuid"
 )
 
 type Helper struct {
 	HKey []byte `inject:"hmac.key"`
 	//16、24或者32位的[]byte，分别对应AES-128, AES-192或AES-256算法
-	Cip    cipher.Block   `inject:"aes.cip"`
-	Redis  *redis.Pool    `inject:""`
-	Logger *syslog.Writer `inject:""`
+	Cip    cipher.Block    `inject:"aes.cip"`
+	Redis  *redis.Pool     `inject:""`
+	Logger *logging.Logger `inject:""`
 }
 
 func (p *Helper) TokenParse(req *http.Request) (map[string]interface{}, error) {

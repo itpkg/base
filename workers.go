@@ -2,13 +2,13 @@ package base
 
 import (
 	"fmt"
-	"log/syslog"
 
 	"github.com/jrallison/go-workers"
+	"github.com/op/go-logging"
 )
 
 type JobMiddleware struct {
-	logger *syslog.Writer
+	logger *logging.Logger
 }
 
 func (p *JobMiddleware) Call(queue string, message *workers.Msg, next func() bool) (acknowledge bool) {

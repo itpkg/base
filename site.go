@@ -2,7 +2,6 @@ package base
 
 import (
 	"fmt"
-	"log/syslog"
 	"net/http"
 
 	"github.com/carlescere/scheduler"
@@ -10,15 +9,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	"github.com/jrallison/go-workers"
+	"github.com/op/go-logging"
 )
 
 type SiteEngine struct {
-	Db         *gorm.DB       `inject:""`
-	Logger     *syslog.Writer `inject:""`
-	Redis      *redis.Pool    `inject:""`
-	Router     *gin.Engine    `inject:""`
-	I18n       *I18n          `inject:""`
-	SettingDao *SettingDao    `inject:""`
+	Db         *gorm.DB        `inject:""`
+	Logger     *logging.Logger `inject:""`
+	Redis      *redis.Pool     `inject:""`
+	Router     *gin.Engine     `inject:""`
+	I18n       *I18n           `inject:""`
+	SettingDao *SettingDao     `inject:""`
 }
 
 func (p *SiteEngine) Cron() {
