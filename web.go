@@ -115,28 +115,16 @@ type List struct {
 //---------------------------Table---------------------------------------------
 func NewTable(id, action string, header []*Th, body func() [][]interface{}, new, view, edit, remove bool, pager *Pager) *Table {
 
-	var bodyV [][]interface{}
-	if view || edit || remove {
-		header = append(header, &Th{Label: "form.button.manage", Width: "20%"})
-
-		for _, row := range body() {
-			bg := make([]*Button, 0)
-
-			row = append(row, bg)
-			bodyV = append(bodyV, row)
-		}
-	} else {
-		bodyV = body()
-	}
-
 	tab := Table{
-		Id:      id,
-		Title:   fmt.Sprintf("table.title.%s", id),
-		Action:  action,
-		Header:  header,
-		Body:    bodyV,
-		Refresh: "form.button.refresh",
-		Pager:   pager,
+		Id:       id,
+		Title:    fmt.Sprintf("table.title.%s", id),
+		Action:   action,
+		Header:   header,
+		Body:     body(),
+		Refresh:  "form.button.refresh",
+		Manage:   "form.button.manage",
+		Pager:    pager,
+		Messages: []string{"label.are_you_sure"},
 	}
 	if new {
 		tab.New = "form.button.new"
@@ -163,20 +151,28 @@ func (p *Table) T(i18n *I18n, locale string) {
 	p.Refresh = i18n.T(locale, p.Refresh)
 	p.Edit = i18n.T(locale, p.Edit)
 	p.New = i18n.T(locale, p.New)
+	p.Manage = i18n.T(locale, p.Manage)
+	p.Title = i18n.T(locale, p.Title)
+
+	for k, v := range p.Messages {
+		p.Messages[k] = i18n.T(locale, v)
+	}
 }
 
 type Table struct {
-	Id      string          `json:"id"`
-	Action  string          `json:"action"`
-	Title   string          `json:"title"`
-	Header  []*Th           `json:"header"`
-	Body    [][]interface{} `json:"body"`
-	New     string          `json:"new"`
-	Edit    string          `json:"edit"`
-	Remove  string          `json:"remove"`
-	Refresh string          `json:"refresh"`
-	View    string          `json:"view"`
-	Pager   *Pager          `json:"pager"`
+	Id       string          `json:"id"`
+	Action   string          `json:"action"`
+	Title    string          `json:"title"`
+	Header   []*Th           `json:"header"`
+	Body     [][]interface{} `json:"body"`
+	New      string          `json:"new"`
+	Edit     string          `json:"edit"`
+	Remove   string          `json:"remove"`
+	Refresh  string          `json:"refresh"`
+	View     string          `json:"view"`
+	Manage   string          `json:"manage"`
+	Pager    *Pager          `json:"pager"`
+	Messages []string        `json:"messages"`
 }
 
 type Pager struct {
