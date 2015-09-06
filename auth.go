@@ -290,7 +290,7 @@ type EmailFm struct {
 //-----------------------model---------------------------------------
 type User struct {
 	Model
-	Uid       string `sql:"not null;type:UUID;default:uuid_generate_v4()"`
+	Uid       string `sql:"not null;type:UUID;default:gen_random_uuid()"`
 	Name      string `sql:"not null;size:64;index"`
 	Email     string `sql:"size:128;index"`
 	Token     string `sql:"size:255;index;not null"`

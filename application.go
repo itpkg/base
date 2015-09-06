@@ -69,7 +69,7 @@ func (p *Application) Routes() {
 }
 
 func (p *Application) Migrate() {
-	for _, ext := range []string{"uuid-ossp", "pgcrypto"} {
+	for _, ext := range []string{"pgcrypto"} {
 		p.Db.Exec(fmt.Sprintf("CREATE EXTENSION IF NOT EXISTS \"%s\"", ext))
 	}
 
