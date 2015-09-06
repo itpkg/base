@@ -276,12 +276,8 @@ func (p *Form) AddHiddenField(id string, value interface{}) {
 
 func (p *Form) AddTextField(id string, value interface{}, required bool, readonly bool) {
 	size := 8
-	lbl := p.label(id)
-	phl := p.placeholder(id)
 	if id == "username" {
 		size = 4
-		lbl = "form.field.username"
-		phl = "form.placeholder.username"
 	}
 
 	p.Fields = append(p.Fields, &TextField{
@@ -289,12 +285,12 @@ func (p *Form) AddTextField(id string, value interface{}, required bool, readonl
 			Id:   id,
 			Type: "text",
 		},
-		Label:       lbl,
+		Label:       p.label(id),
 		Value:       value,
 		Size:        size,
 		Required:    required,
 		Readonly:    readonly,
-		Placeholder: phl,
+		Placeholder: p.placeholder(id),
 	})
 }
 
@@ -304,12 +300,12 @@ func (p *Form) AddEmailField(id string, value interface{}, required bool, readon
 			Id:   id,
 			Type: "email",
 		},
-		Label:       "form.field.email",
+		Label:       p.label(id),
 		Value:       value,
 		Size:        7,
 		Required:    required,
 		Readonly:    readonly,
-		Placeholder: "form.placeholder.email",
+		Placeholder: p.placeholder(id),
 	})
 }
 
@@ -320,31 +316,24 @@ func (p *Form) AddPasswordField(id string, required, confirmed bool) {
 			Id:   id,
 			Type: "password",
 		},
-		Label:       "form.field.password",
+		Label:       p.label(id),
 		Required:    required,
 		Size:        6,
-		Placeholder: "form.placeholder.password",
-	}
-	if id != "password" {
-		p1.Placeholder = p.placeholder(id)
-		p1.Label = p.label(id)
+		Placeholder: p.placeholder(id),
 	}
 	p.AddField(p1)
 
+	rid := "re_" + id
 	if confirmed {
 		p2 := &PasswordField{
 			Field: Field{
-				Id:   "re_" + id,
+				Id:   rid,
 				Type: "password",
 			},
-			Label:       "form.field.re_password",
+			Label:       p.label(rid),
 			Required:    required,
 			Size:        6,
-			Placeholder: "form.placeholder.re_password",
-		}
-		if id != "password" {
-			p2.Placeholder = p.placeholder(p2.Id)
-			p2.Label = p.label(p2.Id)
+			Placeholder: p.placeholder(rid),
 		}
 		p.AddField(p2)
 	}
@@ -430,11 +419,23 @@ func (p *Form) AddField(f interface{}) {
 }
 
 func (p *Form) label(id string) string {
-	return fmt.Sprintf("form.field.%s.%s", p.Id, id)
+	switch {
+	case id == "email" || id == "username" || id == "password" || id == "re_password":
+		return "form.field." + id
+	default:
+		return fmt.Sprintf("form.field.%s.%s", p.Id, id)
+	}
+
 }
 
 func (p *Form) placeholder(id string) string {
-	return fmt.Sprintf("form.placeholder.%s.%s", p.Id, id)
+	switch {
+	case id == "email" || id == "username" || id == "password" || id == "re_password":
+		return "form.placeholder." + id
+	default:
+		return fmt.Sprintf("form.placeholder.%s.%s", p.Id, id)
+	}
+
 }
 
 type Field struct {
