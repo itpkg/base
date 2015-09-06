@@ -379,7 +379,7 @@ func (p *Form) AddHtmlField(id string, value interface{}, required bool) {
 	})
 }
 
-func (p *Form) AddSelectField(id string, ofn func() []Option) {
+func (p *Form) AddSelectField(id string, ofn func() []*Option) {
 	p.AddField(&SelectField{
 		Field: Field{
 			Id:   id,
@@ -390,7 +390,7 @@ func (p *Form) AddSelectField(id string, ofn func() []Option) {
 	})
 }
 
-func (p *Form) AddCheckboxGroupField(id string, ofn func() []Option) {
+func (p *Form) AddCheckboxGroupField(id string, ofn func() []*Option) {
 	p.AddField(&GroupField{
 		Field: Field{
 			Id:   id,
@@ -401,7 +401,7 @@ func (p *Form) AddCheckboxGroupField(id string, ofn func() []Option) {
 	})
 }
 
-func (p *Form) AddRadioGroupField(id string, ofn func() []Option) {
+func (p *Form) AddRadioGroupField(id string, ofn func() []*Option) {
 	p.AddField(&GroupField{
 		Field: Field{
 			Id:   id,
@@ -461,14 +461,14 @@ type Option struct {
 }
 type SelectField struct {
 	Field
-	Label    string   `json:"label"`
-	Options  []Option `json:"options"`
-	Multiple bool     `json:"multi"`
+	Label    string    `json:"label"`
+	Options  []*Option `json:"options"`
+	Multiple bool      `json:"multi"`
 }
 type GroupField struct {
 	Field
-	Label   string   `json:"label"`
-	Options []Option `json:"options"`
+	Label   string    `json:"label"`
+	Options []*Option `json:"options"`
 }
 
 type Button struct {

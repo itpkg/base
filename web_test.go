@@ -11,28 +11,29 @@ func TestForm(t *testing.T) {
 	fm := base.NewForm("fmId", "/form.action")
 	fm.AddButton("view", "btnAction", "PUT", true, "success")
 	fm.AddHiddenField("hid", "hidVal")
-	fm.AddTextField("tid", "txtVal")
-	fm.AddEmailField("eid", "aaa@aaa.com")
-	fm.AddPasswordField("pid", true)
-	fm.AddPasswordField("pid", false)
-	fm.AddTextareaField("taid", "text area")
-	fm.AddMarkdownField("taid", "## 中文\n### subject")
-	fm.AddHtmlField("taid", "<h1>title</h1><hr/>")
+	fm.AddTextField("tid", "txtVal", true)
+	fm.AddEmailField("eid", "aaa@aaa.com", true)
+	fm.AddPasswordField("pid", true, true)
+	fm.AddPasswordField("pid", false, true)
+	fm.AddTextareaField("taid", "text area", true)
+	fm.AddMarkdownField("taid", "## 中文\n### subject", true)
+	fm.AddHtmlField("taid", "<h1>title</h1><hr/>", true)
 
-	items := []base.Option{
-		base.Option{
+	items := []*base.Option{
+		&base.Option{
 			Id:      "item-1",
 			Label:   "label-1",
 			Checked: true,
-		}, base.Option{
+		},
+		&base.Option{
 			Id:    "item-2",
 			Label: "label-2",
 		},
 	}
 
-	fm.AddSelectField("sid", func() []base.Option { return items })
-	fm.AddRadioGroupField("rid", func() []base.Option { return items })
-	fm.AddCheckboxGroupField("cid", func() []base.Option { return items })
+	fm.AddSelectField("sid", func() []*base.Option { return items })
+	fm.AddRadioGroupField("rid", func() []*base.Option { return items })
+	fm.AddCheckboxGroupField("cid", func() []*base.Option { return items })
 
 	checkJson(t, &fm)
 }
