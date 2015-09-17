@@ -1,10 +1,9 @@
 package base
 
-
-func CurrentUser(){
+func CurrentUser() {
 
 }
 
-func Can() error{
+func Can() error {
 	return nil
 }

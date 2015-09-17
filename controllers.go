@@ -4,61 +4,56 @@ import (
 	"github.com/itpkg/web"
 )
 
-type UserController struct {
+func Show() {
+
+}
+func SignIn() {
+
+}
+func SignUp() {
+
+}
+func ForgotPassword() {
 
 }
 
-func (p *UserController) SignIn(){
-
-}
-func(p *UserController)  SignUp(){
-
-}
-func(p *UserController)  ForgotPassword(){
+func ResetPassword() {
 
 }
 
-func(p *UserController)  ResetPassword(){
+func UpdateProfile() {
 
 }
 
-func(p *UserController)  UpdateProfile(){
+func Unlock() {
 
 }
 
-func(p *UserController)  Unlock(){
+func Confirm() {
 
 }
 
-func(p *UserController)  Confirm(){
+func Sitemap() {
+
+}
+func Rss() {
 
 }
 
-type SiteController struct {
+func init() {
+	en := web.NewEngine("")
 
-}
-func(p *SiteController)  Sitemap(){
+	en.POST("/users/sign_in", nil, SignIn)
+	en.POST("/users/sign_up", nil, SignUp)
+	en.POST("/users/confirm", nil, Confirm)
+	en.POST("/users/unlock", nil, Unlock)
+	en.POST("/users/forgot_password", nil, ForgotPassword)
+	en.POST("/users/reset_password", nil, ResetPassword)
+	en.POST("/users/profile", nil, UpdateProfile)
+	en.GET(`/users/(?P<id>\d+)`, nil, Show)
 
-}
-func (p *SiteController) Rss(){
-
-}
-
-func init(){
-	en:=web.NewEngine("")
-
-	uc := &UserController{}
-	en.POST("/users/sign_in",nil, uc.SignIn)
-	en.POST("/users/sign_up",nil, uc.SignUp)
-	en.POST("/users/confirm",nil, uc.Confirm)
-	en.POST("/users/unlock",nil, uc.Unlock)
-	en.POST("/users/forgot_password",nil, uc.ForgotPassword)
-	en.POST("/users/reset_password",nil, uc.ResetPassword)
-	en.POST("/users/profile",nil, uc.UpdateProfile)
-
-	sc := &SiteController{}
-	en.GET("/rss.atom",nil, sc.Rss)
-	en.GET("/sitemap.xml.gz", nil, sc.Sitemap)
+	en.GET("/rss.atom", nil, Rss)
+	en.GET("/sitemap.xml.gz", nil, Sitemap)
 
 	web.Mount(en)
 }
