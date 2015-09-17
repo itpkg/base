@@ -4,56 +4,66 @@ import (
 	"github.com/itpkg/web"
 )
 
-func Show() {
+func GetShow() {
 
 }
-func SignIn() {
+func PostSignIn() {
 
 }
-func SignUp() {
+func PostSignUp() {
 
 }
-func ForgotPassword() {
-
-}
-
-func ResetPassword() {
+func PostForgotPassword() {
 
 }
 
-func UpdateProfile() {
+func PostResetPassword() {
 
 }
 
-func Unlock() {
+func PostUpdateProfile() {
 
 }
 
-func Confirm() {
+func PostUnlock() {
 
 }
 
-func Sitemap() {
+func PostConfirm() {
 
 }
-func Rss() {
+
+func GetUnlock() {
+
+}
+
+func GetConfirm() {
+
+}
+
+func GetSitemap() {
+
+}
+func GetRss() {
 
 }
 
 func init() {
 	en := web.NewEngine("")
 
-	en.POST("/users/sign_in", nil, SignIn)
-	en.POST("/users/sign_up", nil, SignUp)
-	en.POST("/users/confirm", nil, Confirm)
-	en.POST("/users/unlock", nil, Unlock)
-	en.POST("/users/forgot_password", nil, ForgotPassword)
-	en.POST("/users/reset_password", nil, ResetPassword)
-	en.POST("/users/profile", nil, UpdateProfile)
-	en.GET(`/users/(?P<id>\d+)`, nil, Show)
+	en.POST("/users/sign_in", nil, PostSignIn)
+	en.POST("/users/sign_up", nil, PostSignUp)
+	en.POST("/users/confirm", nil, PostConfirm)
+	en.GET("/users/confirm", nil, GetConfirm)
+	en.POST("/users/unlock", nil, PostUnlock)
+	en.GET("/users/unlock", nil, GetUnlock)
+	en.POST("/users/forgot_password", nil, PostForgotPassword)
+	en.POST("/users/reset_password", nil, PostResetPassword)
+	en.POST("/users/profile", nil, PostUpdateProfile)
+	en.GET(`/users/(?P<id>\d+)`, nil, GetShow)
 
-	en.GET("/rss.atom", nil, Rss)
-	en.GET("/sitemap.xml.gz", nil, Sitemap)
+	en.GET("/rss.atom", nil, GetRss)
+	en.GET("/sitemap.xml.gz", nil, GetSitemap)
 
 	web.Mount(en)
 }
