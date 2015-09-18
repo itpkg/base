@@ -142,8 +142,8 @@ func (p *LocaleDao) Set(db *gorm.DB, lang, code, message string) {
 }
 
 func (p *LocaleDao) Get(db *gorm.DB, lang, code string) string {
-	l := Locale{Lang: lang, Code: code}
-	db.Model(l).First(&l)
+	l := Locale{}
+	db.Select("message").Where("lang = ? AND code = ?", lang, code).First(&l)
 	return l.Message
 }
 

@@ -58,6 +58,7 @@ func (p *Engine) Mount() {
 	router := web.NewRouter()
 	router.GET("^/sitemap.xml.gz$", p.Sitemap)
 	router.GET("^/rss.atom$", p.Rss)
+	router.GET("^/site.info$", p.SiteInfo)
 	router.GET(`^/locales/(?P<locale>[a-zA-Z_]{5})/translation.json$`, p.Locales)
 
 	p.Mux.AddRouter(router)
