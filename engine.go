@@ -15,6 +15,7 @@ type Engine struct {
 	AuthDao    *AuthDao        `inject:""`
 	LocaleDao  *LocaleDao      `inject:""`
 	SettingDao *SettingDao     `inject:""`
+	Cache      web.Cache       `inject:""`
 }
 
 func (p *Engine) Migrate() error {

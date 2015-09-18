@@ -7,11 +7,19 @@ import (
 )
 
 func (p *Engine) SiteInfo(c *web.Context) *web.HttpError {
-	rst := make(map[string]interface{}, 0)
-	for _, k := range []string{"title", "copyright", "keywords", "description"} {
-		rst[k] = p.LocaleDao.Get(p.Db, c.Locale(), "site."+k)
+
+	buf, err := p.Cache.MustGet("site/info", func() ([]byte, error) {
+		ifo := make(map[string]interface{}, 0)
+		for _, k := range []string{"title", "copyright", "keywords", "description"} {
+			ifo[k] = p.LocaleDao.Get(p.Db, c.Locale(), "site."+k)
+		}
+		return web.ToJson(ifo)
+	}, 0)
+
+	if err == nil {
+		return c.JSON(buf)
 	}
-	return c.JSON(rst)
+	return web.ServerError(err)
 }
 
 func (p *Engine) Sitemap(c *web.Context) *web.HttpError {
