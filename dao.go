@@ -134,7 +134,7 @@ func (p *LocaleDao) Load(db *gorm.DB, path string) error {
 
 func (p *LocaleDao) Set(db *gorm.DB, lang, code, message string) {
 	var l Locale
-	if db.Select([]string{"id"}).Where("lang = ? AND code = ?", lang, code).First(&l).RecordNotFound() {
+	if db.Select("id").Where("lang = ? AND code = ?", lang, code).First(&l).RecordNotFound() {
 		db.Create(&Locale{Lang: lang, Code: code, Message: message})
 	} else {
 		db.Model(Locale{}).Where("id = ?", l.ID).Updates(Locale{Message: message})
