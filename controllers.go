@@ -7,19 +7,13 @@ import (
 )
 
 func (p *Engine) SiteInfo(c *web.Context) *web.HttpError {
-
-	buf, err := p.Cache.MustGet("site/info", func() ([]byte, error) {
+	return c.CACHE(web.MT_JSON, "site/info", func() ([]byte, error) {
 		ifo := make(map[string]interface{}, 0)
 		for _, k := range []string{"title", "copyright", "keywords", "description"} {
 			ifo[k] = p.LocaleDao.Get(p.Db, c.Locale(), "site."+k)
 		}
 		return web.ToJson(ifo)
 	}, 0)
-
-	if err == nil {
-		return c.JSON(buf)
-	}
-	return web.ServerError(err)
 }
 
 func (p *Engine) Sitemap(c *web.Context) *web.HttpError {
